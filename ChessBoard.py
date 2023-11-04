@@ -3,10 +3,10 @@ import chess
 class ChessBoard:
 
     def __init__(self):
-        self.board = chess.Board
+        self.own_board = chess.Board
         self.turn = 0
 
-    def transPosition(x, y):
+    def transPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
         # @date 23/11/03 
         # @return "".join([trans_x, trans_y]) : 변환된 체스 좌표 값.
@@ -39,14 +39,13 @@ class ChessBoard:
         # @return White or Black, Stalemate or Checkmate
         # @param self
 
-        if self.board.is_stalemate() == True:
+        if self.own_board.is_stalemate() == True:
 
             if self.turn % 2 == 0:
                 return True, False
             else:
                 return False, False
-
-        elif self.board.is_checkmate() == True:
+        elif self.own_board.is_checkmate() == True:
 
             if self.turn % 2 == 0:
                 return True, True
@@ -59,15 +58,17 @@ class ChessBoard:
         # @return boolean : 가능한 움직임 여부
         # @param self, position : 포지션
 
-        if chess.Move.from_uci(position) in self.board.legalMoves:
+        move = chess.Move.from_uci(position)
+
+        if move in self.own_board.legal_moves:
             return True
         
         return False
 
     def move(self, raw_position):
-        # @brief board에 움직임을 반영
+        # @brief own_board에 움직임을 반영
         # @date 23/11/03 
-        # @return boolean : 가능한 움직임인지 여부, board : 변경된 보드
+        # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
         # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값
 
         raw_position = raw_position.split(",")
@@ -76,25 +77,67 @@ class ChessBoard:
         y = int(raw_position[1])
         next_x = int(raw_position[2])
         next_y = int(raw_position[3])
-        position = "".join([self.transPosition(self, x=x, y=y), self.transPosition(self, x=next_x, y=next_y)])
+        position = "".join([self.transPosition(x=x, y=y), self.transPosition(x=next_x, y=next_y)])
         if self.legalMove(position=position) == True:
-            self.board.push_san(position)
+            self.own_board.push_san("e2e4")
             print(f'{position} success')
-            return True, self.board
+            self.turn += 1
+            return True, self.own_board
         else:
             print(f'{position} failed')
-            return False, self.board
-
-    def returnReward(list):
-        # @brief 보상을 줌
-        # @date 23/11/03 
-        # @return float Reward 
-        # @param list : move함수의 반환값
-
-        if list[0] == True:
-            return 0
-        else:
-            return -0.1
-            
+            return False, self.own_board
         
+    def returnRewardWhite(tuple):
+        # @brief 보상을 부여해줌
+        # @date 23/11/04
+        # @return Reward
+        # @param tuple : judgement 결과, move 결과
+
+        if type(tuple[1]) == bool: # judgement 결과
+            if tuple[0] == True: # 백
+                if tuple[1] == False: # stalemate
+                    return -0.2
+                else: # checkmate
+                    return -1
+            else:
+                if tuple[1] == False: # stalemate
+                    return -0.2
+                else:
+                    return 1
+        else: # move 결과
+            if tuple[0] == True:
+                return -0.01
+            else:
+                return -0.05
+    
+    def returnRewardBlack(tuple):
+        # @brief 흑에게 보상을 부여해줌
+        # @date 23/11/04
+        # @return Reward
+        # @param tuple : judgement 결과, move 결과
+
+        if type(tuple[1]) == bool: # judgement 결과
+            if tuple[0] == True: # 백
+                if tuple[1] == False: # stalemate
+                    return -0.2
+                else: # checkmate
+                    return 1
+            else:
+                if tuple[1] == False: # stalemate
+                    return -0.2
+                else:
+                    return -1
+        else: # move 결과
+            if tuple[0] == True:
+                return -0.01
+            else:
+                return -0.05
             
+    def visualize(self):
+        self.move('4, 6, 4, 4')
+        print(self.own_board)
+        return self.own_board
+
+
+a = ChessBoard()
+print(a.visualize())
