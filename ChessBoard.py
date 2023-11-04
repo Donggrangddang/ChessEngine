@@ -6,7 +6,7 @@ class ChessBoard:
         self.own_board = chess.Board()
         self.turn = 0
 
-    def transPosition(self, x, y):
+    def transRawPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
         # @date 23/11/03 
         # @return "".join([trans_x, trans_y]) : 변환된 체스 좌표 값.
@@ -33,7 +33,7 @@ class ChessBoard:
 
         return "".join([trans_x, trans_y])
 
-    def judgement(self):
+    def judgementEnd(self):
         # @brief stalemate인지 checkmate인지 판별해줌
         # @date 23/11/03 
         # @return White or Black, Stalemate or Checkmate
@@ -71,13 +71,13 @@ class ChessBoard:
         # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
         # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값
 
-        raw_position = raw_position.split(",")
+        raw_position = list(raw_position)
 
         x = int(raw_position[0])
         y = int(raw_position[1])
         next_x = int(raw_position[2])
         next_y = int(raw_position[3])
-        position = "".join([self.transPosition(x=x, y=y), self.transPosition(x=next_x, y=next_y)])
+        position = "".join([self.transRawPosition(x=x, y=y), self.transRawPosition(x=next_x, y=next_y)])
         if self.legalMove(position=position) == True:
             self.own_board.push_san("e2e4")
             print(f'{position} success')
@@ -91,9 +91,9 @@ class ChessBoard:
         # @brief 보상을 부여해줌
         # @date 23/11/04
         # @return Reward
-        # @param tuple : judgement 결과, move 결과
+        # @param tuple : judgementEnd 결과, move 결과
 
-        if type(tuple[1]) == bool: # judgement 결과
+        if type(tuple[1]) == bool: # judgementEnd 결과
             if tuple[0] == True: # 백
                 if tuple[1] == False: # stalemate
                     return -0.2
@@ -134,7 +134,7 @@ class ChessBoard:
                 return -0.05
             
     def visualize(self):
-        self.move('4, 6, 4, 1')
+        self.move('4641')
         print(self.own_board)
         return self.own_board
 
