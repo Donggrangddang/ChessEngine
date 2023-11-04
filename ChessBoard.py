@@ -3,7 +3,7 @@ import chess
 class ChessBoard:
 
     def __init__(self):
-        self.own_board = chess.Board
+        self.own_board = chess.Board()
         self.turn = 0
 
     def transPosition(self, x, y):
@@ -134,10 +134,9 @@ class ChessBoard:
                 return -0.05
             
     def visualize(self):
-        self.move('4, 6, 4, 4')
+        self.move('4, 6, 4, 1')
         print(self.own_board)
         return self.own_board
 
-
 a = ChessBoard()
-print(a.visualize())
+a.visualize()
