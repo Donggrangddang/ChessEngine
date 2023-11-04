@@ -6,7 +6,7 @@ class ChessBoard:
         self.own_board = chess.Board()
         self.turn = 1
 
-    def transRawPosition(self, x, y):
+    def transSanPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
         # @date 23/11/03 
         # @return "".join([trans_x, trans_y]) : 변환된 체스 좌표 값.
@@ -69,14 +69,14 @@ class ChessBoard:
         # @brief own_board에 움직임을 반영
         # @date 23/11/03 
         # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
-        # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값
+        # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값 or 바로 UCI 좌표값
 
         if raw_position.isdecimal(): # raw_position이 숫자로 입력되면
             x = int(raw_position[0])
             y = int(raw_position[1])
             next_x = int(raw_position[2])
             next_y = int(raw_position[3])
-            position = "".join([self.transRawPosition(x=x, y=y), self.transRawPosition(x=next_x, y=next_y)])
+            position = "".join([self.transSanPosition(x=x, y=y), self.transSanPosition(x=next_x, y=next_y)])
         
         else:
             position = raw_position
