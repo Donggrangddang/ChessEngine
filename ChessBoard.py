@@ -4,7 +4,7 @@ class ChessBoard:
 
     def __init__(self):
         self.own_board = chess.Board()
-        self.turn = 0
+        self.turn = 1
 
     def transRawPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
@@ -71,15 +71,18 @@ class ChessBoard:
         # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
         # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값
 
-        raw_position = list(raw_position)
+        if raw_position.isdecimal(): # raw_position이 숫자로 입력되면
+            x = int(raw_position[0])
+            y = int(raw_position[1])
+            next_x = int(raw_position[2])
+            next_y = int(raw_position[3])
+            position = "".join([self.transRawPosition(x=x, y=y), self.transRawPosition(x=next_x, y=next_y)])
+        
+        else:
+            position = raw_position
 
-        x = int(raw_position[0])
-        y = int(raw_position[1])
-        next_x = int(raw_position[2])
-        next_y = int(raw_position[3])
-        position = "".join([self.transRawPosition(x=x, y=y), self.transRawPosition(x=next_x, y=next_y)])
-        if self.legalMove(position=position) == True:
-            self.own_board.push_san("e2e4")
+        if self.legalMove(position) == True:
+            self.own_board.push_san(position)
             print(f'{position} success')
             self.turn += 1
             return True, self.own_board
@@ -133,10 +136,13 @@ class ChessBoard:
             else:
                 return -0.05
             
-    def visualize(self):
-        self.move('4641')
+    def visualize(self, raw_position):
+        self.move(raw_position)
+        print(self.turn % 2)
         print(self.own_board)
         return self.own_board
 
 a = ChessBoard()
-a.visualize()
+
+while True:
+    a.visualize(input())
