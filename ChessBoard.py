@@ -3,7 +3,7 @@ import chess
 class ChessBoard:
 
     def __init__(self):
-        self.own_board = chess.Board()
+        self.board = chess.Board()
         self.turn = 1
 
     def transSanPosition(self, x, y):
@@ -39,13 +39,13 @@ class ChessBoard:
         # @return White or Black, Stalemate or Checkmate
         # @param self
 
-        if self.own_board.is_stalemate() == True:
+        if self.board.is_stalemate() == True:
 
             if self.turn % 2 == 0:
                 return True, False
             else:
                 return False, False
-        elif self.own_board.is_checkmate() == True:
+        elif self.board.is_checkmate() == True:
 
             if self.turn % 2 == 0:
                 return True, True
@@ -60,15 +60,15 @@ class ChessBoard:
 
         move = chess.Move.from_uci(position)
 
-        if move in self.own_board.legal_moves:
+        if move in self.board.legal_moves:
             return True
         
         return False
 
     def move(self, raw_position):
-        # @brief own_board에 움직임을 반영
+        # @brief board에 움직임을 반영
         # @date 23/11/03 
-        # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
+        # @return boolean : 가능한 움직임인지 여부, board : 변경된 보드
         # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값 or 바로 UCI 좌표값
 
         if raw_position.isdecimal(): # raw_position이 숫자로 입력되면
@@ -82,13 +82,15 @@ class ChessBoard:
             position = raw_position
 
         if self.legalMove(position) == True:
-            self.own_board.push_san(position)
+            self.board.push_san(position)
             print(f'{position} success')
             self.turn += 1
-            return True, self.own_board
+            board = self.board
+            return True, board
         else:
             print(f'{position} failed')
-            return False, self.own_board
+            board = self.board
+            return False, board
         
     def returnRewardWhite(tuple):
         # @brief 보상을 부여해줌
@@ -139,8 +141,9 @@ class ChessBoard:
     def visualize(self, raw_position):
         self.move(raw_position)
         print(self.turn % 2)
-        print(self.own_board)
-        return self.own_board
+        print(self.board.legal_moves)
+        print(self.board)
+        return self.board
 
 a = ChessBoard()
 

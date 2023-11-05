@@ -1,4 +1,5 @@
 import ChessBoard
+import chess
 import numpy as np
 
 '''
@@ -44,7 +45,7 @@ class ChessEngine(ChessBoard):
             return True, self.state.index(state)
         else: 
             self.state.append()
-            return False
+            return False, False
 
     def addLegalAction(self, state):
         # @brief state에서 가능한 Action을 self.action에 추가함
@@ -100,22 +101,65 @@ class ChessEngine(ChessBoard):
 
         return None
     
-    def generateRandomSoftPolicy(self, epsilon=0.1):
+    def generateRandomSoftPolicy(self, epsilon=0.1, param=True):
         # @brief 임의의 소프트 정책을 만들어줌
         # @date 23/11/04
         # @return None
-        # @param self
+        # @param self, epsilon : 입실론, param : True면 하고 False면 그냥 랜덤
 
-        for i in range(len(self.action)):
-            for j in range(len(self.action[i])):
-                if self.pi[i] == self.action[i].index(self.action[i][j]):
-                    self.b[i][j] = 1 - epsilon + (1 / len(self.action[i]))
-                else:
+        if param:
+            for i in range(len(self.action)):
+                for j in range(len(self.action[i])):
+                    if self.pi[i] == self.action[i].index(self.action[i][j]):
+                        self.b[i][j] = 1 - epsilon + epsilon * (1 / len(self.action[i]))
+                    else:
+                        self.b[i][j] = epsilon / len(self.action[i])
+
+        else:
+            for i in range(len(self.action)):
+                for j in range(len(self.action[i])):
                     self.b[i][j] = 1 / len(self.action[i])
+
 
         return None
 
+    def generateProbability(self):
+
+        return 0
+
+    def chooseAction(self, state_index):
+        # @brief b에 따른 확률로 Action을 정함
+        # @date 23/11/05
+        # @return action : 취할 행동
+        # @param self, state_index : 현재 상태의 index값
+
+        action = np.random.choice(self.action[state_index], 1, p=self.b[state_index])
+
+        return action
+    
+
     def generateEpisode(self):
-        
+        # @brief 에피소드를 생성함
+        # @date 23/11/04
+        # @return episode
+        # @param self
+
+        board = chess.Board()
+
+        judgement = self.judgementState(self, state=self.board)
+
+        if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
+            action = self.chooseAction(judgement[1])
+            if self.move(action)[1] == board: # 한번 검증
+
+
+
+
+
+
+
+
+
+
 
 
