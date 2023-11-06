@@ -105,16 +105,16 @@ class ChessBoard:
         else:
 
             if judgement_end[0] == True:
-                if judgementend[1] == False:
-                    print('stalemate')
-                else:
-                    print('백 승')
-
-            else:
-                if judgementend[1] == False:
+                if judgement_end[1] == False:
                     print('stalemate')
                 else:
                     print('흑 승')
+
+            else:
+                if judgement_end[1] == False:
+                    print('stalemate')
+                else:
+                    print('백 승')
 
     def returnRewardWhite(tuple):
         # @brief 보상을 부여해줌
