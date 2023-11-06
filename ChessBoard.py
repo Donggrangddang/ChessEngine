@@ -4,7 +4,7 @@ class ChessBoard:
 
     def __init__(self):
         self.board = chess.Board()
-        self.turn = 1
+        self.turn = 0
 
     def transSanPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
@@ -33,24 +33,28 @@ class ChessBoard:
 
         return "".join([trans_x, trans_y])
 
-    def judgementEnd(self):
+    def judgementEnd(self, board, turn):
         # @brief stalemate인지 checkmate인지 판별해줌
         # @date 23/11/03 
         # @return White or Black, Stalemate or Checkmate
         # @param self
 
-        if self.board.is_stalemate() == True:
+        if board.is_stalemate() == True:
 
             if self.turn % 2 == 0:
                 return True, False
             else:
                 return False, False
-        elif self.board.is_checkmate() == True:
+
+        elif board.is_checkmate() == True:
 
             if self.turn % 2 == 0:
                 return True, True
             else:
                 return False, True
+
+        else:
+            return None
 
     def legalMove(self, position):
         # @brief 가능한 움직임인지 아닌지 판별해줌
@@ -81,17 +85,37 @@ class ChessBoard:
         else:
             position = raw_position
 
-        if self.legalMove(position) == True:
-            self.board.push_san(position)
-            print(f'{position} success')
-            self.turn += 1
-            board = self.board
-            return True, board
+        print(self.turn % 2)
+
+        judgement_end = self.judgementEnd(self.board, self.turn)
+
+        if judgement_end == None:
+
+            if self.legalMove(position) == True:
+                self.board.push_san(position)
+                print(f'{position} success')
+                self.turn += 1
+                board = self.board
+                return True, board
+            else:
+                print(f'{position} failed')
+                board = self.board
+                return False, board
+
         else:
-            print(f'{position} failed')
-            board = self.board
-            return False, board
-        
+
+            if judgement_end[0] == True:
+                if judgementend[1] == False:
+                    print('stalemate')
+                else:
+                    print('백 승')
+
+            else:
+                if judgementend[1] == False:
+                    print('stalemate')
+                else:
+                    print('흑 승')
+
     def returnRewardWhite(tuple):
         # @brief 보상을 부여해줌
         # @date 23/11/04
@@ -140,8 +164,6 @@ class ChessBoard:
             
     def visualize(self, raw_position):
         self.move(raw_position)
-        print(self.turn % 2)
-        print(self.board.legal_moves)
         print(self.board)
         return self.board
 

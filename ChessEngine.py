@@ -43,8 +43,9 @@ class ChessEngine(ChessBoard):
 
         if state in self.state:
             return True, self.state.index(state)
-        else: 
-            self.state.append()
+        else:
+            if state not in self.state:
+                self.state.append()
             return False, False
 
     def addLegalAction(self, state):
@@ -123,7 +124,14 @@ class ChessEngine(ChessBoard):
 
         return None
 
-    def generateProbability(self):
+    def generateProbability(self, state_index):
+        # @brief b에 따른 확률을 정함(초기 b)
+        # @date 23/11/06
+        # @return 0
+        # @param self, state_index : 현재 상태의 index값
+
+        for i in range(len(self.action[state_index])):
+            self.b[state_index][i] = 1 / len(self.action[state_index])
 
         return 0
 
@@ -136,21 +144,38 @@ class ChessEngine(ChessBoard):
         action = np.random.choice(self.action[state_index], 1, p=self.b[state_index])
 
         return action
-    
-
+        
     def generateEpisode(self):
         # @brief 에피소드를 생성함
         # @date 23/11/04
         # @return episode
         # @param self
 
+        episode = []
+        action_list = []
+        state_list = []
+        reward_list = []
         board = chess.Board()
+        turn = 0
 
-        judgement = self.judgementState(self, state=self.board)
+        while self.judgementEnd(board, turn) == None:
 
-        if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
-            action = self.chooseAction(judgement[1])
-            if self.move(action)[1] == board: # 한번 검증
+            judgement = self.judgementState(self, state=board)
+            state_index = judgement[1]
+
+            if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
+                action = self.chooseAction(judgement[1])
+                board = self.move(action)[1]
+                action_list.append(action)
+                state_list.append(state)
+
+            else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
+                self.addLegalAction(state=board)
+                self.generateProbability(judgement[1])
+                action = self.chooseAction(judgement[1])
+                board = self.move(action)[1]
+                action_list.append(action)
+                state_list.append(state)
 
 
 
