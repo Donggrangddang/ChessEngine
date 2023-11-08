@@ -1,6 +1,6 @@
-import ChessBoard
-import chess
+from ChessBoard import ChessBoard
 import numpy as np
+import chess
 
 '''
 - 필요한 변수
@@ -36,10 +36,10 @@ class ChessEngine(ChessBoard):
         self.action_black = []
         self.cumulative_weight_white = []
         self.cumulative_weight_black = []
-        self.pi_white = np.empty()
-        self.pi_black = np.empty()
-        self.b_white = np.empty()
-        self.b_black = np.empty()
+        self.pi_white = np.empty(shape=0)
+        self.pi_black = np.empty(shape=0)
+        self.b_white = np.empty(shape=0)
+        self.b_black = np.empty(shape=0)
 
     def judgementState(self, state, color):
         # @brief 특정 color의 state가 self.state_color안에 있는 지 확인하고 있으면 True와 index를 반환하고 없다면 False를 반환하고 상태를 추가함
@@ -47,13 +47,14 @@ class ChessEngine(ChessBoard):
         # @return boolean, self.state.index(state) : 현재 상태의 self.state에서의 index값
         # @param self, state : 상태 값, boolean color : True = 백, False = 흑
 
+        print('judgementState')
+
         if color == True: # 백
 
             if state in self.state_white:
                 return True, self.state_white.index(state)
             else:
-                if state not in self.state_white:
-                    self.state_white.append()
+                self.state_white.append(state)
                 return False, False
             
         else:
@@ -61,8 +62,7 @@ class ChessEngine(ChessBoard):
             if state in self.state_black:
                 return True, self.state_black.index(state)
             else:
-                if state not in self.state_black:
-                    self.state_black.append()
+                self.state_black.append(state)
                 return False, False
 
     def judgementAction(self, state_index, action, color=True):
@@ -70,6 +70,8 @@ class ChessEngine(ChessBoard):
         # @date 23/11/09
         # @return 
         # @param self, state_index : state의 index값, color : 흑, 백
+
+        print('judgementAction')
 
         if color == True: # 백
 
@@ -85,16 +87,18 @@ class ChessEngine(ChessBoard):
         # @return List legal_moves : 가능한 움직임 List
         # @param self, state : 상태 값, boolean color : True = 백, False = 흑
 
+        print('addLegalAction')
+
         if color == True:
         
             legal_moves_raw = list(state.legal_moves)
             legal_moves = []
             for i in range(len(legal_moves_raw)):
-                append_legal_move = legal_moves_raw[i].replace('Move.from_uci(', '')
+                append_legal_move = str(legal_moves_raw[i]).replace('Move.from_uci(', '')
                 append_legal_move = append_legal_move.replace(')', '')
                 legal_moves.append(append_legal_move)
 
-            legal_moves = self.transRawPosition(self, list=legal_moves)
+            legal_moves = self.transRawPosition(legal_moves)
             self.action_white.append(legal_moves)
 
             return legal_moves
@@ -119,13 +123,15 @@ class ChessEngine(ChessBoard):
         # @return None
         # @param self, legal_moves : 가능한 움직임
 
+        print('transRawPosition')
+
         for i in range(len(legal_moves)):
 
             position = list(legal_moves[i])
 
             for j in range(len(position)):
 
-                _ = None
+                _ = []
                 dummy = position[j]
 
                 if j % 2 == 0: # 영어
@@ -133,7 +139,7 @@ class ChessEngine(ChessBoard):
                 else: # 숫자
                     _.append(8 - dummy[j])
                 
-                position[i] = "".join(_)
+                position[i] = "".join(_[0])
             
             legal_moves[i] = position
         
@@ -144,6 +150,8 @@ class ChessEngine(ChessBoard):
         # @date 23/11/09
         # @return None
         # @param self, boolean color
+
+        print('findOptimalPolicy')
 
         if color == True: # 백이라면
 
@@ -160,6 +168,8 @@ class ChessEngine(ChessBoard):
         # @date 23/11/04
         # @return None
         # @param self, epsilon : 입실론, param : True면 하고 False면 그냥 랜덤
+
+        print('generateRandomSoftPolicy')
 
         if color == True:
 
@@ -201,6 +211,8 @@ class ChessEngine(ChessBoard):
         # @return 0
         # @param self, state_index : 현재 상태의 index값
 
+        print('generateProbablility')
+
         if color == True:
 
             for i in range(len(self.action_white[state_index])):
@@ -221,6 +233,8 @@ class ChessEngine(ChessBoard):
         # @return action : 취할 행동
         # @param self, state_index : 현재 상태의 index값
 
+        print('chooseAction')
+
         if color == True:
 
             action = np.random.choice(self.action_white[state_index], 1, p=self.b_white[state_index])
@@ -239,6 +253,8 @@ class ChessEngine(ChessBoard):
         # @return episode : episode_white + episode_black
         # @param self
 
+        print('generateEpisode')
+
         episode_white = []
         episode_black = []
         action_list_white = []
@@ -252,7 +268,7 @@ class ChessEngine(ChessBoard):
 
         while self.judgementEnd(board, turn) == None:
 
-            judgement = self.judgementState(self, state=board)
+            judgement = self.judgementState(state=board, color=(turn % 2 == 0))
             state_index = judgement[1]
 
             if turn % 2 == 0: # 백이라면
@@ -306,9 +322,11 @@ class ChessEngine(ChessBoard):
     def run(self, times=10 ** 7):
         return_generate_episode = self.generateEpisode()
 
+        print('run')
+
         episode = return_generate_episode[0]
-        episode[0] = episode_white
-        episode[1] = episode_black
+        episode_white = episode[0]
+        episode_black = episode[1]
         state_list_white = episode_white[0]
         action_list_white = episode_white[1]
         reward_list_white = episode_white[2]

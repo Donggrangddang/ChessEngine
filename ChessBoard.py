@@ -12,6 +12,8 @@ class ChessBoard:
         # @return "".join([trans_x, trans_y]) : 변환된 체스 좌표 값.
         # @param x : 변환하려는 x 좌표값, y : 변환하려는 y 좌표값.
 
+        print('transSanPosition')
+
         if x == 0:
             trans_x = "a"
         elif  x == 1:
@@ -39,6 +41,8 @@ class ChessBoard:
         # @return White or Black, Stalemate or Checkmate
         # @param self
 
+        print('judgementEnd')
+
         if board.is_stalemate() == True:
 
             if turn % 2 == 0:
@@ -60,6 +64,8 @@ class ChessBoard:
         # @return boolean : 가능한 움직임 여부
         # @param self, position : 포지션
 
+        print('legalMove')
+
         move = chess.Move.from_uci(position)
 
         if move in self.own_board.legal_moves:
@@ -72,6 +78,8 @@ class ChessBoard:
         # @date 23/11/03 
         # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
         # @param self, String raw_position : 처음 좌표값 + 움직일 좌표값 or 바로 UCI 좌표값
+
+        print('move')
 
         if raw_position.isdecimal(): # raw_position이 숫자로 입력되면
             x = int(raw_position[0])
@@ -98,6 +106,8 @@ class ChessBoard:
         # @return Reward
         # @param result_judgementEnd : judgementEnd 결과
 
+        print('returnRewardWhite')
+
         if type(result_judgementEnd[1]) == bool: # judgementEnd 결과
             if result_judgementEnd[0] == True: # 백
                 if result_judgementEnd[1] == False: # stalemate
@@ -118,6 +128,8 @@ class ChessBoard:
         # @return Reward
         # @param result_judgementEnd : judgement 결과, move 결과
 
+        print('returnRewardBlack')
+
         if type(result_judgementEnd[1]) == bool: # judgement 결과
             if result_judgementEnd[0] == True: # 백
                 if result_judgementEnd[1] == False: # stalemate
@@ -137,8 +149,3 @@ class ChessBoard:
         print(self.turn % 2)
         print(self.own_board)
         return self.own_board
-
-a = ChessBoard()
-
-while True:
-    a.visualize(input())
