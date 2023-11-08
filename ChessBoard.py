@@ -52,6 +52,8 @@ class ChessBoard:
             else:
                 return False, True
 
+        return None
+
     def legalMove(self, position):
         # @brief 가능한 움직임인지 아닌지 판별해줌
         # @date 23/11/03 

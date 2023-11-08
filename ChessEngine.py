@@ -34,8 +34,8 @@ class ChessEngine(ChessBoard):
         self.state_black = []
         self.action_white = []
         self.action_black = []
-        self.cumulaive_weight_white = []
-        self.cumulaive_weight_black = []
+        self.cumulative_weight_white = []
+        self.cumulative_weight_black = []
         self.pi_white = np.empty()
         self.pi_black = np.empty()
         self.b_white = np.empty()
@@ -64,6 +64,20 @@ class ChessEngine(ChessBoard):
                 if state not in self.state_black:
                     self.state_black.append()
                 return False, False
+
+    def judgementAction(self, state_index, action, color=True):
+        # @brief 특정 color에서의 state에서 action의 index값을 알아냄
+        # @date 23/11/09
+        # @return 
+        # @param self, state_index : state의 index값, color : 흑, 백
+
+        if color == True: # 백
+
+            return self.action_white[state_index].index(action)
+
+        else:
+            
+            return self.action_black[state_index].index(action)
 
     def addLegalAction(self, state, color=True):
         # @brief 특정한 color의 state에서 가능한 Action을 self.action_color에 추가함
@@ -125,21 +139,21 @@ class ChessEngine(ChessBoard):
         
         return None
         
-    def findOptimalPolicy(self, color):
+    def findOptimalPolicy(self, state_index, color):
         # @brief 특정한 color의 최적 정책(pi)를 찾아줌
-        # @date 23/11/07
+        # @date 23/11/09
         # @return None
         # @param self, boolean color
 
         if color == True: # 백이라면
 
-            self.pi_white = np.argmax(self.quality_value_white, axis=1)
-            return None
+            self.pi_white[state_index] = np.argmax(self.quality_value_white[state_index], axis=1)
+            return self.pi_white[state_index]
         
         else:
 
-            self.pi_black = np.argmax(self.quality_value_black, axis=1)
-            return None
+            self.pi_black[state_index] = np.argmax(self.quality_value_black[state_index], axis=1)
+            return self.pi_black[state_index]
         
     def generateRandomSoftPolicy(self, epsilon=0.1, param=True, color=True):
         # @brief 임의의 소프트 정책을 만들어줌
@@ -222,7 +236,7 @@ class ChessEngine(ChessBoard):
     def generateEpisode(self):
         # @brief 에피소드를 생성함
         # @date 23/11/08
-        # @return episode
+        # @return episode : episode_white + episode_black
         # @param self
 
         episode_white = []
@@ -250,7 +264,7 @@ class ChessEngine(ChessBoard):
                     board = self.move(action)[1]
                     action_list_white.append(action)
                     state_list_white.append(board)
-                    reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
+                    reward_list_white.append(0)                    
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board)
@@ -259,7 +273,8 @@ class ChessEngine(ChessBoard):
                     board = self.move(action)[1]
                     action_list_white.append(action)
                     state_list_white.append(board)
-                    reward_list_white.append(None)
+                    reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
+                    
 
             else: # 흑이라면
 
@@ -270,7 +285,7 @@ class ChessEngine(ChessBoard):
                     board = self.move(action)[1]
                     action_list_black.append(action)
                     state_list_black.append(board)
-                    reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
+                    reward_list_black.append(0)
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board, color=color)
@@ -279,15 +294,140 @@ class ChessEngine(ChessBoard):
                     board = self.move(action)[1]
                     action_list_black.append(action)
                     state_list_black.append(board)
-                    reward_list_black.append(None)
+                    reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
+                    
 
         episode_white.append(state_list_white, action_list_white, reward_list_white)
         episode_black.append(state_list_black, action_list_black, reward_list_black)
         episode = episode_white + episode_black
 
-        return episode
+        return episode, turn
 
-            
+    def run(self, times=10 ** 7):
+        return_generate_episode = self.generateEpisode()
+
+        episode = return_generate_episode[0]
+        episode[0] = episode_white
+        episode[1] = episode_black
+        state_list_white = episode_white[0]
+        action_list_white = episode_white[1]
+        reward_list_white = episode_white[2]
+        state_list_black = episode_black[0]
+        action_list_black = episode_black[1]
+        reward_list_black = episode_black[2]
+        turn = return_generate_episode[1]
+        G_white = 0
+        G_black = 0
+        W_white = 1
+        W_black = 1
+        discount_rate = 0.9
+
+        for i in range(times):
+
+            if times % 10000 == 0:
+                print(times)
+
+            if turn % 2 == 0: # 백 차례에서 끝남 -> 흑 승
+
+                for t in range(turn, -2, -1): # 흑
+
+                    G_black = discount_rate * G_black + reward_list_black[t + 1]
+                    state_index = self.judgementState(state=state_list_black[t], color=False)
+                    action_index = self.judgementAction(state_index=state_index, action=action_list_black[t], color=False)
+
+                    self.cumulative_weight_black[state_index][action_index] += W_black
+                    self.quality_value_black[state_index][action_index] += (W_black / self.cumulative_weight_black[state_index][action_index]) * (G_black - self.quality_value_black[state_index][action_index])
+                    optimal_action = self.findOptimalPolicy(state_index, color=False)
+
+                    if action_list_black[t] != optimal_action:
+                        break
+                    else:
+                        W_black *= 1 / self.b_black[state_index][action_index]
+
+                for t in range(turn - 1, -2, -1): # 백
+
+                    G_white = discount_rate * G_white + reward_list_white[t + 1]
+                    state_index = self.judgementState(state=state_list_white[t], color=False)
+                    action_index = self.judgementAction(state_index=state_index, action=action_list_white[t], color=False)
+
+                    self.cumulative_weight_white[state_index][action_index] += W_white
+                    self.quality_value_white[state_index][action_index] += (W_white / self.cumulative_weight_white[state_index][action_index]) * (G_white - self.quality_value_white[state_index][action_index])
+                    optimal_action = self.findOptimalPolicy(state_index, color=False)
+
+                    if action_list_white[t] != optimal_action:
+                        break
+                    else:
+                        W_white *= 1 / self.b_white[state_index][action_index]
+    
+            else: # 백 승
+                
+                for t in range(turn - 1, -2, -1): # 흑
+
+                    G_black = discount_rate * G_black + reward_list_black[t + 1]
+                    state_index = self.judgementState(state=state_list_black[t], color=False)
+                    action_index = self.judgementAction(state_index=state_index, action=action_list_black[t], color=False)
+
+                    self.cumulative_weight_black[state_index][action_index] += W_black
+                    self.quality_value_black[state_index][action_index] += (W_black / self.cumulative_weight_black[state_index][action_index]) * (G_black - self.quality_value_black[state_index][action_index])
+                    optimal_action = self.findOptimalPolicy(state_index, color=False)
+
+                    if action_list_black[t] != optimal_action:
+                        break
+                    else:
+                        W_black *= 1 / self.b_black[state_index][action_index]
+
+                for t in range(turn, -2, -1): # 백
+
+                    G_white = discount_rate * G_white + reward_list_white[t + 1]
+                    state_index = self.judgementState(state=state_list_white[t], color=False)
+                    action_index = self.judgementAction(state_index=state_index, action=action_list_white[t], color=False)
+
+                    self.cumulative_weight_white[state_index][action_index] += W_white
+                    self.quality_value_white[state_index][action_index] += (W_white / self.cumulative_weight_white[state_index][action_index]) * (G_white - self.quality_value_white[state_index][action_index])
+                    optimal_action = self.findOptimalPolicy(state_index, color=False)
+
+                    if action_list_white[t] != optimal_action:
+                        break
+                    else:
+                        W_white *= 1 / self.b_white[state_index][action_index]
+
+    def saveAsTxtFile(self):
+        f = open(f'summerize_{self}', "w+")
+        f.write('quality_value_white')
+        f.write(self.quality_value_white)
+        f.write('state_white')
+        f.write(self.state_white)
+        f.write('action_white')
+        f.write(self.action_white)
+        f.write('cumulative_weight_white')
+        f.write(self.cumulative_weight_white)
+        f.write('pi_white')
+        f.write(self.pi_white)
+        f.write('b_white')
+        f.write(self.b_white)
+        f.write('quality_value_black')
+        f.write(self.quality_value_black)
+        f.write('state_black')
+        f.write(self.state_black)
+        f.write('action_black')
+        f.write(self.action_black)
+        f.write('cumulative_weight_black')
+        f.write(self.cumulative_weight_black)
+        f.write('pi_black')
+        f.write(self.pi_black)
+        f.write('b_black')
+        f.write(self.b_black)
+        f.close()
+
+    def visualize(self):
+        self.run()
+        self.saveAsTxtFile()
+
+a = ChessEngine()
+
+a.visualize()
+
+
 
 
 
