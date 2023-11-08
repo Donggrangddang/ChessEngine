@@ -65,7 +65,7 @@ class ChessEngine(ChessBoard):
                     self.state_black.append()
                 return False, False
 
-    def addLegalAction(self, state, color):
+    def addLegalAction(self, state, color=True):
         # @brief 특정한 color의 state에서 가능한 Action을 self.action_color에 추가함
         # @date 23/11/04
         # @return List legal_moves : 가능한 움직임 List
@@ -221,14 +221,18 @@ class ChessEngine(ChessBoard):
         
     def generateEpisode(self):
         # @brief 에피소드를 생성함
-        # @date 23/11/04
+        # @date 23/11/08
         # @return episode
         # @param self
 
-        episode = []
-        action_list = []
-        state_list = []
-        reward_list = []
+        episode_white = []
+        episode_black = []
+        action_list_white = []
+        action_list_black = []
+        state_list_white = []
+        state_list_black = []
+        reward_list_white = [0]
+        reward_list_black = [0]
         board = chess.Board()
         turn = 0
 
@@ -237,19 +241,53 @@ class ChessEngine(ChessBoard):
             judgement = self.judgementState(self, state=board)
             state_index = judgement[1]
 
-            if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
-                action = self.chooseAction(judgement[1])
-                board = self.move(action)[1]
-                action_list.append(action)
-                state_list.append(board)
+            if turn % 2 == 0: # 백이라면
 
-            else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
-                self.addLegalAction(state=board)
-                self.generateProbability(judgement[1])
-                action = self.chooseAction(judgement[1])
-                board = self.move(action)[1]
-                action_list.append(action)
-                state_list.append(board)
+                color = True
+
+                if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
+                    action = self.chooseAction(state_index, color)
+                    board = self.move(action)[1]
+                    action_list_white.append(action)
+                    state_list_white.append(board)
+                    reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
+
+                else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
+                    self.addLegalAction(state=board)
+                    self.generateProbability(state_index, color)
+                    action = self.chooseAction(state_index, color)
+                    board = self.move(action)[1]
+                    action_list_white.append(action)
+                    state_list_white.append(board)
+                    reward_list_white.append(None)
+
+            else: # 흑이라면
+
+                color = False
+                
+                if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
+                    action = self.chooseAction(state_index, color)
+                    board = self.move(action)[1]
+                    action_list_black.append(action)
+                    state_list_black.append(board)
+                    reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
+
+                else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
+                    self.addLegalAction(state=board, color=color)
+                    self.generateProbability(state_index, color)
+                    action = self.chooseAction(state_index, color)
+                    board = self.move(action)[1]
+                    action_list_black.append(action)
+                    state_list_black.append(board)
+                    reward_list_black.append(None)
+
+        episode_white.append(state_list_white, action_list_white, reward_list_white)
+        episode_black.append(state_list_black, action_list_black, reward_list_black)
+        episode = episode_white + episode_black
+
+        return episode
+
+            
 
 
 

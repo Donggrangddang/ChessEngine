@@ -33,21 +33,21 @@ class ChessBoard:
 
         return "".join([trans_x, trans_y])
 
-    def judgementEnd(self):
+    def judgementEnd(self, board, turn):
         # @brief stalemate인지 checkmate인지 판별해줌
         # @date 23/11/03 
         # @return White or Black, Stalemate or Checkmate
         # @param self
 
-        if self.own_board.is_stalemate() == True:
+        if board.is_stalemate() == True:
 
-            if self.turn % 2 == 0:
+            if turn % 2 == 0:
                 return True, False
             else:
                 return False, False
-        elif self.own_board.is_checkmate() == True:
+        elif board.is_checkmate() == True:
 
-            if self.turn % 2 == 0:
+            if turn % 2 == 0:
                 return True, True
             else:
                 return False, True
@@ -90,51 +90,45 @@ class ChessBoard:
             print(f'{position} failed')
             return False, self.own_board
         
-    def returnRewardWhite(tuple):
+    def returnRewardWhite(result_judgementEnd):
         # @brief 보상을 부여해줌
         # @date 23/11/04
         # @return Reward
-        # @param tuple : judgementEnd 결과, move 결과
+        # @param result_judgementEnd : judgementEnd 결과
 
-        if type(tuple[1]) == bool: # judgementEnd 결과
-            if tuple[0] == True: # 백
-                if tuple[1] == False: # stalemate
+        if type(result_judgementEnd[1]) == bool: # judgementEnd 결과
+            if result_judgementEnd[0] == True: # 백
+                if result_judgementEnd[1] == False: # stalemate
                     return -0.2
                 else: # checkmate
                     return -1
             else:
-                if tuple[1] == False: # stalemate
+                if result_judgementEnd[1] == False: # stalemate
                     return -0.2
                 else:
                     return 1
-        else: # move 결과
-            if tuple[0] == True:
-                return -0.01
-            else:
-                return -0.05
+
+        return -0.01
     
-    def returnRewardBlack(tuple):
+    def returnRewardBlack(result_judgementEnd):
         # @brief 흑에게 보상을 부여해줌
         # @date 23/11/04
         # @return Reward
-        # @param tuple : judgement 결과, move 결과
+        # @param result_judgementEnd : judgement 결과, move 결과
 
-        if type(tuple[1]) == bool: # judgement 결과
-            if tuple[0] == True: # 백
-                if tuple[1] == False: # stalemate
+        if type(result_judgementEnd[1]) == bool: # judgement 결과
+            if result_judgementEnd[0] == True: # 백
+                if result_judgementEnd[1] == False: # stalemate
                     return -0.2
                 else: # checkmate
                     return 1
             else:
-                if tuple[1] == False: # stalemate
+                if result_judgementEnd[1] == False: # stalemate
                     return -0.2
                 else:
                     return -1
-        else: # move 결과
-            if tuple[0] == True:
-                return -0.01
-            else:
-                return -0.05
+
+        return -0.01
             
     def visualize(self, raw_position):
         self.move(raw_position)
