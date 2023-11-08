@@ -181,26 +181,43 @@ class ChessEngine(ChessBoard):
 
             return None
 
-    def generateProbability(self, state_index):
+    def generateProbability(self, state_index, color):
         # @brief b에 따른 확률을 정함(초기 b)
         # @date 23/11/06
         # @return 0
         # @param self, state_index : 현재 상태의 index값
 
-        for i in range(len(self.action[state_index])):
-            self.b[state_index][i] = 1 / len(self.action[state_index])
+        if color == True:
 
-        return 0
+            for i in range(len(self.action_white[state_index])):
+                self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
 
-    def chooseAction(self, state_index):
+            return 0
+
+        else:
+
+            for i in range(len(self.action_white[state_index])):
+                self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
+
+            return 0
+
+    def chooseAction(self, state_index, color):
         # @brief b에 따른 확률로 Action을 정함
         # @date 23/11/05
         # @return action : 취할 행동
         # @param self, state_index : 현재 상태의 index값
 
-        action = np.random.choice(self.action[state_index], 1, p=self.b[state_index])
+        if color == True:
 
-        return action
+            action = np.random.choice(self.action_white[state_index], 1, p=self.b_white[state_index])
+
+            return action
+
+        else:
+
+            action = np.random.choice(self.action_white[state_index], 1, p=self.b_white[state_index])
+
+            return action
         
     def generateEpisode(self):
         # @brief 에피소드를 생성함
