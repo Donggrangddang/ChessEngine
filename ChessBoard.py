@@ -4,7 +4,7 @@ class ChessBoard:
 
     def __init__(self):
         self.own_board = chess.Board()
-        self.turn = 1
+        self.turn = 0
 
     def transSanPosition(self, x, y):
         # @brief x, y로 입력되는 좌표를 체스 좌표로 변환해줌.
@@ -58,7 +58,7 @@ class ChessBoard:
 
         return None
 
-    def legalMove(self, position):
+    def legalMove(self, board, position):
         # @brief 가능한 움직임인지 아닌지 판별해줌
         # @date 23/11/03 
         # @return boolean : 가능한 움직임 여부
@@ -68,7 +68,7 @@ class ChessBoard:
 
         move = chess.Move.from_uci(position)
 
-        if move in self.own_board.legal_moves:
+        if move in board.legal_moves:
             return True
         
         return False
@@ -81,17 +81,24 @@ class ChessBoard:
 
         print('move')
 
-        if raw_position.isdecimal(): # raw_position이 숫자로 입력되면
-            x = int(raw_position[0])
-            y = int(raw_position[1])
-            next_x = int(raw_position[2])
-            next_y = int(raw_position[3])
+        raw_position_list = list(str(raw_position))
+
+        while len(raw_position_list) < 4:
+            raw_position_list = ['0'] + raw_position_list
+
+        if type(raw_position) == int or raw_position.isdecimal(): # raw_position이 숫자로 입력되면
+            x = int(raw_position_list[0])
+            y = int(raw_position_list[1])
+            next_x = int(raw_position_list[2])
+            next_y = int(raw_position_list[3])
             position = "".join([self.transSanPosition(x=x, y=y), self.transSanPosition(x=next_x, y=next_y)])
         
         else:
             position = raw_position
 
-        if self.legalMove(position) == True:
+        board = self.own_board
+
+        if self.legalMove(board, position) == True:
             self.own_board.push_san(position)
             print(f'{position} success')
             self.turn += 1
@@ -100,7 +107,7 @@ class ChessBoard:
             print(f'{position} failed')
             return False, self.own_board
         
-    def returnRewardWhite(result_judgementEnd):
+    def returnRewardWhite(self, result_judgementEnd):
         # @brief 보상을 부여해줌
         # @date 23/11/04
         # @return Reward
@@ -122,7 +129,7 @@ class ChessBoard:
 
         return -0.01
     
-    def returnRewardBlack(result_judgementEnd):
+    def returnRewardBlack(self, result_judgementEnd):
         # @brief 흑에게 보상을 부여해줌
         # @date 23/11/04
         # @return Reward

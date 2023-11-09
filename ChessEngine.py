@@ -1,6 +1,6 @@
 from ChessBoard import ChessBoard
-import numpy as np
 import chess
+import random
 
 '''
 - 필요한 변수
@@ -29,18 +29,20 @@ import chess
 class ChessEngine(ChessBoard):
     
     def __init__(self):
-        self.quality_value_white = np.array((0, 162))
-        self.quality_value_black = np.array((0, 162))
+        self.own_board = chess.Board()
+        self.turn = 0
+        self.quality_value_white = []
+        self.quality_value_black = []
         self.state_white = []
         self.state_black = []
         self.action_white = []
         self.action_black = []
         self.cumulative_weight_white = []
         self.cumulative_weight_black = []
-        self.pi_white = np.empty(shape=(0, 162), dtype='uint8')
-        self.pi_black = np.empty(shape=(0, 162), dtype='uint8')
-        self.b_white = np.empty(shape=(0, 162))
-        self.b_black = np.empty(shape=(0, 162))
+        self.pi_white = []
+        self.pi_black = []
+        self.b_white = []
+        self.b_black = []
 
     def judgementState(self, state, color):
         # @brief 특정 color의 state가 self.state_color안에 있는 지 확인하고 있으면 True와 index를 반환하고 없다면 False를 반환하고 상태를 추가함
@@ -113,8 +115,8 @@ class ChessEngine(ChessBoard):
                 append_legal_move = append_legal_move.replace(')', '')
                 legal_moves.append(append_legal_move)
 
-            legal_moves = self.transRawPosition(self, list=legal_moves)
-            self.action_black.append(legal_moves)
+            legal_moves = self.transRawPosition(legal_moves)
+            self.action_black.append(legal)
 
             return legal_moves
 
@@ -126,13 +128,13 @@ class ChessEngine(ChessBoard):
 
         print('transRawPosition')
 
-        for i in range(len(legal_moves)):
+        for i in range(len(legal_moves)): # 가능한 움직임의 개수 만큼 반복
 
-            position = list(legal_moves[i])
+            position = list(legal_moves[i]) # 글자 쪼개기
+            _ = []
 
-            for j in range(len(position)):
+            for j in range(len(position)): # 글자의 수 만큼 반복
 
-                _ = []
                 dummy = position[j]
 
                 if j % 2 == 0: # 영어
@@ -140,8 +142,8 @@ class ChessEngine(ChessBoard):
                 else: # 숫자
                     _.append(str(8 - int(dummy)))
                 
-            position= "".join(_[0])
-            legal_moves[i] = position
+            raw_position= int("".join(_))
+            legal_moves[i] = raw_position
         
         return legal_moves
         
@@ -155,12 +157,18 @@ class ChessEngine(ChessBoard):
 
         if color == True: # 백이라면
 
-            self.pi_white[state_index] = np.argmax(self.quality_value_white[state_index], axis=1)
+            action_list = lambda i: self.quality_value_white[state_index][i]
+            argmax_action_index = max(range(len(self.quality_value_white[state_index])), key=action_list)
+
+            self.pi_white[state_index] = argmax_action_index
             return self.pi_white[state_index]
         
         else:
 
-            self.pi_black[state_index] = np.argmax(self.quality_value_black[state_index], axis=1)
+            action_list = lambda i: self.quality_value_black[state_index][i]
+            argmax_action_index = max(range(len(self.quality_value_black[state_index])), key=action_list)
+
+            self.pi_black[state_index] = argmax_action_index
             return self.pi_black[state_index]
         
     def generateRandomSoftPolicy(self, epsilon=0.1, param=True, color=True):
@@ -215,7 +223,7 @@ class ChessEngine(ChessBoard):
 
         if color == True:
 
-            self.b_white = np.append(self.b_white, np.zeros(shape=(1, 162)), axis=0)
+            self.b_white.append([0 for i in range(len(self.action_white[state_index]))])
 
             for i in range(len(self.action_white[state_index])):
                 self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
@@ -224,10 +232,10 @@ class ChessEngine(ChessBoard):
 
         else:
 
-            self.b_black = np.append(self.b_black, np.zeros(shape=(1, 162)), axis=0)
+            self.b_black.append([0 for i in range(len(self.action_black[state_index]))])
 
-            for i in range(len(self.action_white[state_index])):
-                self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
+            for i in range(len(self.action_black[state_index])):
+                self.b_black[state_index][i] = 1 / len(self.action_black[state_index])
 
             return 0
 
@@ -241,13 +249,13 @@ class ChessEngine(ChessBoard):
 
         if color == True:
 
-            action = np.random.choice(self.action_white[state_index], 1, p=self.b_white[state_index])
+            action = random.choices(self.action_white[state_index], weights = self.b_white[state_index])
 
             return action
 
         else:
 
-            action = np.random.choice(self.action_white[state_index], 1, p=self.b_white[state_index])
+            action = random.choices(self.action_black[state_index], weights = self.b_black[state_index])
 
             return action
         
@@ -291,6 +299,7 @@ class ChessEngine(ChessBoard):
                     self.addLegalAction(state=board, color=color)
                     self.generateProbability(state_index, color)
                     action = self.chooseAction(state_index, color)
+                    action = action[0]
                     board = self.move(action)[1]
                     action_list_white.append(action)
                     state_list_white.append(board)
@@ -312,6 +321,7 @@ class ChessEngine(ChessBoard):
                     self.addLegalAction(state=board, color=color)
                     self.generateProbability(state_index, color)
                     action = self.chooseAction(state_index, color)
+                    action = action[0]
                     board = self.move(action)[1]
                     action_list_black.append(action)
                     state_list_black.append(board)
