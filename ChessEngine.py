@@ -29,8 +29,6 @@ import random
 class ChessEngine(ChessBoard):
     
     def __init__(self):
-        self.own_board = chess.Board()
-        self.turn = 0
         self.quality_value_white = []
         self.quality_value_black = []
         self.state_white = []
@@ -92,31 +90,24 @@ class ChessEngine(ChessBoard):
 
         print('addLegalAction')
 
-        if color == True:
-        
-            legal_moves_raw = list(state.legal_moves)
-            legal_moves = []
-            for i in range(len(legal_moves_raw)):
-                append_legal_move = str(legal_moves_raw[i]).replace('Move.from_uci(', '')
-                append_legal_move = append_legal_move.replace(')', '')
-                legal_moves.append(append_legal_move)
+        legal_moves_raw = list(state.legal_moves)
+        legal_moves = []
+        for i in range(len(legal_moves_raw)):
+            append_legal_move = str(legal_moves_raw[i]).replace('Move.from_uci(', '')
+            append_legal_move = append_legal_move.replace(')', '')
+            legal_moves.append(append_legal_move)
 
-            legal_moves = self.transRawPosition(legal_moves)
+        legal_moves = self.transRawPosition(legal_moves)
+
+        if color == True:
+
             self.action_white.append(legal_moves)
 
             return legal_moves
         
         else:
 
-            legal_moves_raw = list(state.legal_moves)
-            legal_moves = []
-            for i in range(len(legal_moves_raw)):
-                append_legal_move = legal_moves_raw[i].replace('Move.from_uci(', '')
-                append_legal_move = append_legal_move.replace(')', '')
-                legal_moves.append(append_legal_move)
-
-            legal_moves = self.transRawPosition(legal_moves)
-            self.action_black.append(legal)
+            self.action_black.append(legal_moves)
 
             return legal_moves
 
@@ -251,13 +242,13 @@ class ChessEngine(ChessBoard):
 
             action = random.choices(self.action_white[state_index], weights = self.b_white[state_index])
 
-            return action
+            return action[0]
 
         else:
 
             action = random.choices(self.action_black[state_index], weights = self.b_black[state_index])
 
-            return action
+            return action[0]
         
     def generateEpisode(self):
         # @brief 에피소드를 생성함
@@ -278,7 +269,7 @@ class ChessEngine(ChessBoard):
         board = chess.Board()
         turn = 0
 
-        while self.judgementEnd(board, turn) == None:
+        while self.judgementEnd(board, turn) == (3, 3):
 
             judgement = self.judgementState(state=board, color=(turn % 2 == 0))
             state_index = judgement[1]
@@ -289,18 +280,20 @@ class ChessEngine(ChessBoard):
 
                 if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
                     action = self.chooseAction(state_index, color)
-                    board = self.move(action)[1]
+                    return_move = self.move(board, action, turn)
+                    board = return_move[1]
+                    turn = return_move[2]
                     action_list_white.append(action)
                     state_list_white.append(board)
                     reward_list_white.append(0)                    
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
-                    self.state_white.append(board)
                     self.addLegalAction(state=board, color=color)
                     self.generateProbability(state_index, color)
                     action = self.chooseAction(state_index, color)
-                    action = action[0]
-                    board = self.move(action)[1]
+                    return_move = self.move(board, action, turn)
+                    board = return_move[1]
+                    turn = return_move[2]
                     action_list_white.append(action)
                     state_list_white.append(board)
                     reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
@@ -312,7 +305,9 @@ class ChessEngine(ChessBoard):
                 
                 if judgement[0] == True: # 한번 겪었던 상황 -> 이에 대한 확률이 있다.
                     action = self.chooseAction(state_index, color)
-                    board = self.move(action)[1]
+                    return_move = self.move(board, action, turn)
+                    board = return_move[1]
+                    turn = return_move[2]
                     action_list_black.append(action)
                     state_list_black.append(board)
                     reward_list_black.append(0)
@@ -321,15 +316,20 @@ class ChessEngine(ChessBoard):
                     self.addLegalAction(state=board, color=color)
                     self.generateProbability(state_index, color)
                     action = self.chooseAction(state_index, color)
-                    action = action[0]
-                    board = self.move(action)[1]
+                    return_move = self.move(board, action, turn)
+                    board = return_move[1]
+                    turn = return_move[2]
                     action_list_black.append(action)
                     state_list_black.append(board)
                     reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
                     
 
-        episode_white.append(state_list_white, action_list_white, reward_list_white)
-        episode_black.append(state_list_black, action_list_black, reward_list_black)
+        episode_white.append(state_list_white)
+        episode_white.append(action_list_white)
+        episode_white.append(reward_list_white)
+        episode_black.append(state_list_black)
+        episode_black.append(action_list_black)
+        episode_black.append(reward_list_black)
         episode = episode_white + episode_black
 
         return episode, turn
