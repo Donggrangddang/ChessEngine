@@ -8,8 +8,9 @@ import chess
 	- self.action
 	- self.quality_value : Q(s, a)
 	- self.cumulative_weight : C(s, a)
-	- pi
-	- b
+	- pi[state_index] -> 최적 action
+	- b[state_index] -> 각 action에 관한 array
+    - b[state_index][action_index] -> 특정한 action에 관한 확률
 	- G
 	- W
 
@@ -36,10 +37,10 @@ class ChessEngine(ChessBoard):
         self.action_black = []
         self.cumulative_weight_white = []
         self.cumulative_weight_black = []
-        self.pi_white = np.empty(shape=0)
-        self.pi_black = np.empty(shape=0)
-        self.b_white = np.empty(shape=0)
-        self.b_black = np.empty(shape=0)
+        self.pi_white = np.empty(shape=(0, 162), dtype='uint8')
+        self.pi_black = np.empty(shape=(0, 162), dtype='uint8')
+        self.b_white = np.empty(shape=(0, 162))
+        self.b_black = np.empty(shape=(0, 162))
 
     def judgementState(self, state, color):
         # @brief 특정 color의 state가 self.state_color안에 있는 지 확인하고 있으면 True와 index를 반환하고 없다면 False를 반환하고 상태를 추가함
@@ -55,7 +56,7 @@ class ChessEngine(ChessBoard):
                 return True, self.state_white.index(state)
             else:
                 self.state_white.append(state)
-                return False, False
+                return False, self.state_white.index(state)
             
         else:
 
@@ -63,7 +64,7 @@ class ChessEngine(ChessBoard):
                 return True, self.state_black.index(state)
             else:
                 self.state_black.append(state)
-                return False, False
+                return False, self.state_black.index(state)
 
     def judgementAction(self, state_index, action, color=True):
         # @brief 특정 color에서의 state에서 action의 index값을 알아냄
@@ -120,7 +121,7 @@ class ChessEngine(ChessBoard):
     def transRawPosition(self, legal_moves):
         # @brief 체스 좌표를 숫자로 변환해줌
         # @date 23/11/07
-        # @return None
+        # @return legal_moves
         # @param self, legal_moves : 가능한 움직임
 
         print('transRawPosition')
@@ -135,15 +136,14 @@ class ChessEngine(ChessBoard):
                 dummy = position[j]
 
                 if j % 2 == 0: # 영어
-                    _.append(ord(dummy[j]) - 97)
+                    _.append(str(ord(dummy) - 97))
                 else: # 숫자
-                    _.append(8 - dummy[j])
+                    _.append(str(8 - int(dummy)))
                 
-                position[i] = "".join(_[0])
-            
+            position= "".join(_[0])
             legal_moves[i] = position
         
-        return None
+        return legal_moves
         
     def findOptimalPolicy(self, state_index, color):
         # @brief 특정한 color의 최적 정책(pi)를 찾아줌
@@ -215,12 +215,16 @@ class ChessEngine(ChessBoard):
 
         if color == True:
 
+            self.b_white = np.append(self.b_white, np.zeros(shape=(1, 162)), axis=0)
+
             for i in range(len(self.action_white[state_index])):
                 self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
 
             return 0
 
         else:
+
+            self.b_black = np.append(self.b_black, np.zeros(shape=(1, 162)), axis=0)
 
             for i in range(len(self.action_white[state_index])):
                 self.b_white[state_index][i] = 1 / len(self.action_white[state_index])
@@ -283,7 +287,8 @@ class ChessEngine(ChessBoard):
                     reward_list_white.append(0)                    
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
-                    self.addLegalAction(state=board)
+                    self.state_white.append(board)
+                    self.addLegalAction(state=board, color=color)
                     self.generateProbability(state_index, color)
                     action = self.chooseAction(state_index, color)
                     board = self.move(action)[1]
