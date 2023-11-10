@@ -48,7 +48,7 @@ class ChessEngine(ChessBoard):
         # @return boolean, self.state.index(state) : 현재 상태의 self.state에서의 index값
         # @param self, state : 상태 값, boolean color : True = 백, False = 흑
 
-        print('judgementState')
+        # print('judgementState')
 
         if color == True: # 백
 
@@ -72,7 +72,7 @@ class ChessEngine(ChessBoard):
         # @return 
         # @param self, state_index : state의 index값, color : 흑, 백
 
-        print('judgementAction')
+        # print('judgementAction')
 
         if color == True: # 백
 
@@ -88,7 +88,7 @@ class ChessEngine(ChessBoard):
         # @return List legal_moves : 가능한 움직임 List
         # @param self, state : 상태 값, boolean color : True = 백, False = 흑
 
-        print('addLegalAction')
+        # print('addLegalAction')
 
         legal_moves_raw = list(state.legal_moves)
         legal_moves = []
@@ -117,7 +117,7 @@ class ChessEngine(ChessBoard):
         # @return legal_moves
         # @param self, legal_moves : 가능한 움직임
 
-        print('transRawPosition')
+        # print('transRawPosition')
 
         for i in range(len(legal_moves)): # 가능한 움직임의 개수 만큼 반복
 
@@ -144,7 +144,7 @@ class ChessEngine(ChessBoard):
         # @return None
         # @param self, boolean color
 
-        print('findOptimalPolicy')
+        # print('findOptimalPolicy')
 
         if color == True: # 백이라면
 
@@ -168,7 +168,7 @@ class ChessEngine(ChessBoard):
         # @return None
         # @param self, epsilon : 입실론, param : True면 하고 False면 그냥 랜덤
 
-        print('generateRandomSoftPolicy')
+        # print('generateRandomSoftPolicy')
 
         if color == True:
 
@@ -210,7 +210,7 @@ class ChessEngine(ChessBoard):
         # @return 0
         # @param self, state_index : 현재 상태의 index값
 
-        print('generateProbablility')
+        # print('generateProbablility')
 
         if color == True:
 
@@ -236,7 +236,7 @@ class ChessEngine(ChessBoard):
         # @return action : 취할 행동
         # @param self, state_index : 현재 상태의 index값
 
-        print('chooseAction')
+        # print('chooseAction')
 
         if color == True:
 
@@ -256,7 +256,7 @@ class ChessEngine(ChessBoard):
         # @return episode : episode_white + episode_black
         # @param self
 
-        print('generateEpisode')
+        # print('generateEpisode')
 
         episode_white = []
         episode_black = []
@@ -269,7 +269,7 @@ class ChessEngine(ChessBoard):
         board = chess.Board()
         turn = 0
 
-        while self.judgementEnd(board, turn) == (3, 3):
+        while self.judgementEnd(board, turn) == (6, 6):
 
             judgement = self.judgementState(state=board, color=(turn % 2 == 0))
             state_index = judgement[1]
@@ -285,7 +285,8 @@ class ChessEngine(ChessBoard):
                     turn = return_move[2]
                     action_list_white.append(action)
                     state_list_white.append(board)
-                    reward_list_white.append(0)                    
+                    reward_list_white.append(0)
+                    print('1')                    
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board, color=color)
@@ -297,6 +298,7 @@ class ChessEngine(ChessBoard):
                     action_list_white.append(action)
                     state_list_white.append(board)
                     reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
+                    print('2')
                     
 
             else: # 흑이라면
@@ -311,6 +313,7 @@ class ChessEngine(ChessBoard):
                     action_list_black.append(action)
                     state_list_black.append(board)
                     reward_list_black.append(0)
+                    print('3')
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board, color=color)
@@ -322,6 +325,7 @@ class ChessEngine(ChessBoard):
                     action_list_black.append(action)
                     state_list_black.append(board)
                     reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
+                    print('4')
                     
 
         episode_white.append(state_list_white)
@@ -337,7 +341,7 @@ class ChessEngine(ChessBoard):
     def run(self, times=10 ** 7):
         return_generate_episode = self.generateEpisode()
 
-        print('run')
+        # print('run')
 
         episode = return_generate_episode[0]
         episode_white = episode[0]
