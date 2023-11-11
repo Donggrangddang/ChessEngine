@@ -1,5 +1,6 @@
 from ChessBoard import ChessBoard
 import chess
+import chess.pgn
 import random
 
 '''
@@ -50,6 +51,8 @@ class ChessEngine(ChessBoard):
 
         # print('judgementState')
 
+        state = state.fen()
+
         if color == True: # 백
 
             if state in self.state_white:
@@ -97,7 +100,7 @@ class ChessEngine(ChessBoard):
             append_legal_move = append_legal_move.replace(')', '')
             legal_moves.append(append_legal_move)
 
-        legal_moves = self.transRawPosition(legal_moves)
+        # legal_moves = self.transRawPosition(legal_moves)
 
         if color == True:
 
@@ -128,9 +131,9 @@ class ChessEngine(ChessBoard):
 
                 dummy = position[j]
 
-                if j % 2 == 0: # 영어
+                if j == 0 or j == 2: # 영어
                     _.append(str(ord(dummy) - 97))
-                else: # 숫자
+                elif j == 1 or j == 3: # 숫자
                     _.append(str(8 - int(dummy)))
                 
             raw_position= int("".join(_))
@@ -269,6 +272,8 @@ class ChessEngine(ChessBoard):
         board = chess.Board()
         turn = 0
 
+        pgn_list = chess.pgn.Game()
+
         while self.judgementEnd(board, turn) == (6, 6):
 
             judgement = self.judgementState(state=board, color=(turn % 2 == 0))
@@ -284,9 +289,12 @@ class ChessEngine(ChessBoard):
                     board = return_move[1]
                     turn = return_move[2]
                     action_list_white.append(action)
-                    state_list_white.append(board)
+                    state_list_white.append(board.fen())
                     reward_list_white.append(0)
-                    print('1')                    
+                    if turn == 1:
+                        node = pgn_list.add_variation(chess.Move.from_uci(action))
+                    else:
+                        node = node.add_variation(chess.Move.from_uci(action))
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board, color=color)
@@ -296,10 +304,12 @@ class ChessEngine(ChessBoard):
                     board = return_move[1]
                     turn = return_move[2]
                     action_list_white.append(action)
-                    state_list_white.append(board)
+                    state_list_white.append(board.fen())
                     reward_list_white.append(self.returnRewardWhite(self.judgementEnd(board, turn)))
-                    print('2')
-                    
+                    if turn == 1:
+                        node = pgn_list.add_variation(chess.Move.from_uci(action))
+                    else:
+                        node = node.add_variation(chess.Move.from_uci(action))
 
             else: # 흑이라면
 
@@ -311,9 +321,9 @@ class ChessEngine(ChessBoard):
                     board = return_move[1]
                     turn = return_move[2]
                     action_list_black.append(action)
-                    state_list_black.append(board)
+                    state_list_black.append(board.fen())
                     reward_list_black.append(0)
-                    print('3')
+                    node = node.add_variation(chess.Move.from_uci(action))
 
                 else: # 겪지 않았던 상황 -> 이에 대한 확률이 없다.
                     self.addLegalAction(state=board, color=color)
@@ -323,10 +333,11 @@ class ChessEngine(ChessBoard):
                     board = return_move[1]
                     turn = return_move[2]
                     action_list_black.append(action)
-                    state_list_black.append(board)
+                    state_list_black.append(board.fen())
                     reward_list_black.append(self.returnRewardBlack(self.judgementEnd(board, turn)))
-                    print('4')
+                    node = node.add_variation(chess.Move.from_uci(action))
                     
+        print(pgn_list)
 
         episode_white.append(state_list_white)
         episode_white.append(action_list_white)

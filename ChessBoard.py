@@ -74,7 +74,7 @@ class ChessBoard:
         
         return False
 
-    def move(self, board, raw_movement, turn):
+    def move(self, board, movement, turn):
         # @brief own_board에 움직임을 반영
         # @date 23/11/03 
         # @return boolean : 가능한 움직임인지 여부, own_board : 변경된 보드
@@ -82,8 +82,8 @@ class ChessBoard:
 
         # print('move')
 
-        if type(raw_movement) == int: # raw_movement이 숫자로 입력되면
-            raw_movement_list = list(str(raw_movement))
+        '''if type(movement) == int: # raw_movement이 숫자로 입력되면
+            raw_movement_list = list(str(movement))
 
             while len(raw_movement_list) < 4:
                 raw_movement_list = ['0'] + raw_movement_list
@@ -95,15 +95,16 @@ class ChessBoard:
             movement = "".join([self.transSanPosition(x=x, y=y), self.transSanPosition(x=next_x, y=next_y)])
         
         else:
-            movement = raw_movement
+            movement = raw_movement'''
 
         if self.legalMove(board, movement) == True:
             board.push_san(movement)
-            print(f'{movement} success')
+            print(f'{movement}\tsuccess')
             turn += 1
             return True, board, turn
         else:
-            print(f'{movement} failed')
+            print(f'{movement}\tfailed')
+            print(board.fen())
             return False, board, turn
         
     def returnRewardWhite(self, result_judgementEnd):
