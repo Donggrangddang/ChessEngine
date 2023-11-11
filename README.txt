@@ -20,7 +20,7 @@ MainLogic
         - ver2.1 -> 말을 잡는 것에 대해 따로 reward를 주지 않는다.
                 - ver2.11 -> state를 fen의 6번째를 뺀걸로 나타냄
                 - ver2.12 -> state를 fen의 5번째와 6번째를 뺀걸로 나타냄
-        - ver2.2 -> 말을 잡는 것에 대해 reward를 준다.
+        - ver2.2 -> 말을 잡는 것에 대해 reward를 준다. (구현 아직 x)
                 - ver2.21 -> state를 fen의 6번째를 뺀걸로 나타냄
                 - ver2.22 -> state를 fen의 5번째와 6번째를 뺀걸로 나타냄
                 
