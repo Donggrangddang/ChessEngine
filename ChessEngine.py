@@ -56,7 +56,7 @@ class ChessEngine(ChessBoard):
 
         dummy_state = state.split(' ')
 
-        state = " ".join(dummy_state[0:4])
+        state = " ".join(dummy_state[0:3])
 
         if color == True: # 백
 
