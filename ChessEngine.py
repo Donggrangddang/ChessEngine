@@ -51,7 +51,12 @@ class ChessEngine(ChessBoard):
 
         # print('judgementState')
 
-        state = state.fen()
+        if type(state) != str:
+            state = state.fen()
+
+        dummy_state = state.split(' ')
+
+        state = " ".join(dummy_state[0:4])
 
         if color == True: # 백
 
@@ -355,15 +360,15 @@ class ChessEngine(ChessBoard):
         # print('run')
 
         episode = return_generate_episode[0]
-        episode_white = episode[0]
-        episode_black = episode[1]
-        state_list_white = episode_white[0]
-        action_list_white = episode_white[1]
-        reward_list_white = episode_white[2]
-        state_list_black = episode_black[0]
-        action_list_black = episode_black[1]
-        reward_list_black = episode_black[2]
         turn = return_generate_episode[1]
+
+        state_list_white = episode[0]
+        action_list_white = episode[1]
+        reward_list_white = episode[2]
+        state_list_black = episode[3]
+        action_list_black = episode[4]
+        reward_list_black = episode[5]
+        
         G_white = 0
         G_black = 0
         W_white = 1
@@ -373,14 +378,14 @@ class ChessEngine(ChessBoard):
         for i in range(times):
 
             if times % 10000 == 0:
-                print(times)
+                print(i)
 
-            if turn % 2 == 0: # 백 차례에서 끝남 -> 흑 승
+            if turn % 2 == 0: # 백 차례에서 끝남
 
-                for t in range(turn, -2, -1): # 흑
+                for t in range((turn // 2) - 1, -1, -1): # 흑
 
                     G_black = discount_rate * G_black + reward_list_black[t + 1]
-                    state_index = self.judgementState(state=state_list_black[t], color=False)
+                    state_index = self.judgementState(state=state_list_black[t], color=False)[1]
                     action_index = self.judgementAction(state_index=state_index, action=action_list_black[t], color=False)
 
                     self.cumulative_weight_black[state_index][action_index] += W_black
@@ -392,10 +397,10 @@ class ChessEngine(ChessBoard):
                     else:
                         W_black *= 1 / self.b_black[state_index][action_index]
 
-                for t in range(turn - 1, -2, -1): # 백
+                for t in range(((turn - 1) // 2) - 1, -1, -1): # 백
 
                     G_white = discount_rate * G_white + reward_list_white[t + 1]
-                    state_index = self.judgementState(state=state_list_white[t], color=False)
+                    state_index = self.judgementState(state=state_list_white[t], color=False)[1]
                     action_index = self.judgementAction(state_index=state_index, action=action_list_white[t], color=False)
 
                     self.cumulative_weight_white[state_index][action_index] += W_white
@@ -407,12 +412,12 @@ class ChessEngine(ChessBoard):
                     else:
                         W_white *= 1 / self.b_white[state_index][action_index]
     
-            else: # 백 승
+            else: # 흑 차례에서 끝남
                 
-                for t in range(turn - 1, -2, -1): # 흑
+                for t in range(((turn - 1) // 2) - 1, -1, -1): # 흑
 
                     G_black = discount_rate * G_black + reward_list_black[t + 1]
-                    state_index = self.judgementState(state=state_list_black[t], color=False)
+                    state_index = self.judgementState(state=state_list_black[t], color=False)[1]
                     action_index = self.judgementAction(state_index=state_index, action=action_list_black[t], color=False)
 
                     self.cumulative_weight_black[state_index][action_index] += W_black
@@ -424,10 +429,10 @@ class ChessEngine(ChessBoard):
                     else:
                         W_black *= 1 / self.b_black[state_index][action_index]
 
-                for t in range(turn, -2, -1): # 백
+                for t in range((turn // 2) - 1, -1, -1): # 백
 
                     G_white = discount_rate * G_white + reward_list_white[t + 1]
-                    state_index = self.judgementState(state=state_list_white[t], color=False)
+                    state_index = self.judgementState(state=state_list_white[t], color=False)[1]
                     action_index = self.judgementAction(state_index=state_index, action=action_list_white[t], color=False)
 
                     self.cumulative_weight_white[state_index][action_index] += W_white
