@@ -24,3 +24,7 @@ MainLogic
                 - ver2.21 -> state를 fen의 6번째를 뺀걸로 나타냄
                 - ver2.22 -> state를 fen의 5번째와 6번째를 뺀걸로 나타냄
                 
+
+- 할 일
+        - ver2.11, ver2.12, ver2.21, ver2.22 judgementState함수 state = " ".join(dummy_state[0:5])부분 수정 필요(슬라이싱 잘못 함)
+        - ver3.0 add_lagal_action, generate_probablity 함수에서 경험했던 state인지 확인

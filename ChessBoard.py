@@ -99,11 +99,11 @@ class ChessBoard:
 
         if self.legalMove(board, movement) == True:
             board.push_san(movement)
-            print(f'{movement}\tsuccess')
+            # print(f'{movement}\tsuccess')
             turn += 1
             return True, board, turn
         else:
-            print(f'{movement}\tfailed')
+            # print(f'{movement}\tfailed')
             print(board.fen())
             return False, board, turn
         
