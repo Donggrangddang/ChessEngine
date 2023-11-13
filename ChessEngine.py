@@ -1,4 +1,6 @@
 import random
+import time
+import datetime
 
 import chess
 import chess.pgn
@@ -369,19 +371,28 @@ class ChessEngine():
         return episode_white, episode_black, state_list_white, state_list_black, turn
 
 
-    def run(self, times=10 ** 8):
+    def learning(self, times=500):
 
-        self.load_text_data(file_path_white='C:/Codes/ChessEngine/datebase/data3_white.txt', file_path_black='C:/Codes/ChessEngine/datebase/data3_black.txt')
+        # if self.black == {} or self.white == {}:
+        #    self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
 
-        G_white = 0
-        G_black = 0
-        W_white = 1
-        W_black = 1
         discount_rate = 0.9
+        
+        start = time.time()
 
         for i in range(times):
 
+            if i % 100 == 0:
+                print(f'{i}\t{time.time() - start}')
+                self.save_as_txt_file('data1')
+                start = time.time()
+
             return_generate_episode = self.generate_episode()
+
+            G_white = 0
+            G_black = 0
+            W_white = 1
+            W_black = 1
 
             episode_white = return_generate_episode[0]
             episode_black = return_generate_episode[1]
@@ -425,48 +436,157 @@ class ChessEngine():
 
 
     def save_as_txt_file(self, file_name : str):
-        file = open(f'C:/Codes/ChessEngine/datebase/{file_name}_white.txt', "w+")
+
+        print('save_start')
+
+        file = open(f'D:/database/{file_name}_white.txt', "w+")
         for keys in self.white:
             file.write(f'{keys}\t{self.white[keys]}\n')
         file.close()
 
-        file = open(f'C:/Codes/ChessEngine/datebase/{file_name}_black.txt', "w+")
+        file = open(f'D:/database/{file_name}_black.txt', "w+")
         for keys in self.black:
             file.write(f'{keys}\t{self.black[keys]}\n')
         file.close()
 
+        print('save_done')
+
 
     def load_text_data(self, file_path_white : str, file_path_black : str):
+
+        print('load_start')
+
+        start = time.time()
 
         with open(file_path_white, 'r') as file:
             for line in file:
                 key, value = line.strip().split('\t')
-                self.white[key] = value
-        
+                self.white[key] = eval(value)
+
+        print(f'white done {time.time() - start}')
+        start = time.time()
+
         with open(file_path_black, 'r') as file:
             for line in file:
                 key, value = line.strip().split('\t')
-                self.black[key] = value
+                self.black[key] = eval(value)
+        
+        print(f'black done {time.time() - start}')
+
+        print('load_done')
+        
+
+    def playing(self):
+    
+        if self.black == {} or self.white == {}:
+            self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
+
+        player_color = bool(input('white = True, black = False\t'))
+        board = chess.Board()
+
+        pgn_list = chess.pgn.Game()
+        if player_color:
+            pgn_list.headers["White"] = input('Write Player Name\t')
+            pgn_list.headers["Black"] = "AI"
+        else:
+            pgn_list.headers["Black"] = input("Write Player Name\t")
+            pgn_list.headers["White"] = "AI"
+
+        pgn_list.headers["Event"] = input('Write Event Name\t')
+        pgn_list.headers["Date"] = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        turn = 0
+
+        if player_color: # 플레이어가 백을 잡았을 때
+
+            while self.judgement_end(board, turn) == (6, 6):
+
+                if turn % 2 == 0: # 백 차례라면
+
+                    movement = input('enter UCI\t')
+
+                    result_move_player = self.move_player(board, movement, turn)
+
+                    if result_move_player[0] == True:
+                        board = result_move_player[1]
+                        turn = result_move_player[2]
+                        if turn == 1:
+                            node = pgn_list.add_variation(chess.Move.from_uci(movement))
+                        else:
+                            node = node.add_variation(chess.Move.from_uci(movement))
+                        print(board)
+                    else:
+                        print('illegal_move')
+                
+                else: # 흑 차례라면
+                    
+                    state = self.state_converter(board.fen())
+                    try:
+                        movement = self.black[state][4]
+                        if movement == None:
+                            movement = self.choose_action(state, color=False)
+                    except:
+                        self.judgement_state(state, color=False)
+                        movement = self.choose_action(state, color=False)
+                    
+                    result_move_agent = self.move_agent(board, movement, turn)
+                    board = result_move_agent[0]
+                    turn = result_move_player[1]
+
+                    node = node.add_variation(chess.Move.from_uci(movement))
+
+                    print(movement)
+                    print(board)
+
+        else: # 플레이어가 흑을 잡았을 때
+
+            while self.judgement_end(board, turn) == (6, 6):
+    
+                if turn % 2 == 1: # 흑 차례라면
+
+                    movement = input('enter UCI\t')
+
+                    result_move_player = self.move_player(board, movement, turn)
+
+                    if result_move_player[0] == True:
+                        board = result_move_player[1]
+                        turn = result_move_player[2]
+                        node = node.add_variation(chess.Move.from_uci(movement))
+
+                        print(board)
+                    else:
+                        print('illegal_move')
+                
+                else: # 백 차례라면
+                    
+                    state = self.state_converter(board.fen())
+                    try:
+                        movement = self.white[state][4]
+                        if movement == None:
+                            movement = self.choose_action(state, color=True)
+                    except:
+                        self.judgement_state(state, color=True)
+                        movement = self.choose_action(state, color=True)
+                    
+                    result_move_agent = self.move_agent(board, movement, turn)
+                    board = result_move_agent[0]
+                    turn = result_move_player[1]
+
+                    if turn == 1:
+                        node = pgn_list.add_variation(chess.Move.from_uci(movement))
+                    else:
+                        node = node.add_variation(chess.Move.from_uci(movement))
+
+                    print(movement)
+                    print(board)
+
+        print(pgn_list)
 
 
     def visualize(self):
-        self.run()
-        self.save_as_txt_file("data3")
+        self.learning()
+        self.playing()
 
 a = ChessEngine()
 
 a.visualize()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
