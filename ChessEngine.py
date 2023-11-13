@@ -214,13 +214,13 @@ class ChessEngine():
             return self.black[state][0].index(action)
 
 
-    def legal_action(self, state : str) -> list:
+    def legal_action(self, board : str) -> list:
         """
         state에서 가능한 Action 반환한다.
         시간복잡도 : O(n)
         """
 
-        legal_moves_raw = list(state.legal_moves)
+        legal_moves_raw = list(board.legal_moves)
         legal_moves = []
 
         for i in range(len(legal_moves_raw)):
@@ -371,7 +371,7 @@ class ChessEngine():
         return episode_white, episode_black, state_list_white, state_list_black, turn
 
 
-    def learning(self, times=500):
+    def learning(self, times=101):
 
         # if self.black == {} or self.white == {}:
         #    self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
@@ -479,7 +479,7 @@ class ChessEngine():
     def playing(self):
     
         if self.black == {} or self.white == {}:
-            self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
+            self.load_text_data(file_path_white='D:/database/data1_white.txt', file_path_black='D:/database/data1_black.txt')
 
         player_color = bool(input('white = True, black = False\t'))
         board = chess.Board()
@@ -522,8 +522,8 @@ class ChessEngine():
                     
                     state = self.state_converter(board.fen())
                     try:
-                        movement = self.black[state][4]
-                        if movement == None:
+                        movement = self.black[state][4][0]
+                        if movement[0] == None: 
                             movement = self.choose_action(state, color=False)
                     except:
                         self.judgement_state(state, color=False)
@@ -531,7 +531,7 @@ class ChessEngine():
                     
                     result_move_agent = self.move_agent(board, movement, turn)
                     board = result_move_agent[0]
-                    turn = result_move_player[1]
+                    turn = result_move_agent[1]
 
                     node = node.add_variation(chess.Move.from_uci(movement))
 
@@ -561,15 +561,15 @@ class ChessEngine():
                     
                     state = self.state_converter(board.fen())
                     try:
-                        movement = self.white[state][4]
+                        movement = self.white[state][4][0]
                         if movement == None:
                             movement = self.choose_action(state, color=True)
                     except:
                         self.judgement_state(state, color=True)
                         movement = self.choose_action(state, color=True)
                     
-                    result_move_agent = self.move_agent(board, movement, turn)
-                    board = result_move_agent[0]
+                    result_move_player = self.move_player(board, movement, turn)
+                    board = result_move_player[0]
                     turn = result_move_player[1]
 
                     if turn == 1:
@@ -584,7 +584,6 @@ class ChessEngine():
 
 
     def visualize(self):
-        self.learning()
         self.playing()
 
 a = ChessEngine()
