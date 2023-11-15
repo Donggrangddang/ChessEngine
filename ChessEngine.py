@@ -1,7 +1,10 @@
 import random
 import time
 import datetime
+import json
+import os
 
+from tqdm import tqdm
 import chess
 import chess.pgn
 
@@ -260,7 +263,7 @@ class ChessEngine():
         시간복잡도 : O(n)
         """
 
-        epslion = 0.1
+        epslion = 0.5
 
         if param:
             return [1 / len for i in range(len)]
@@ -371,10 +374,10 @@ class ChessEngine():
         return episode_white, episode_black, state_list_white, state_list_black, turn
 
 
-    def learning(self, times=101):
+    def learning(self, times=10 ** 8 + 1):
 
-        # if self.black == {} or self.white == {}:
-        #    self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
+        if self.black == {} or self.white == {}:
+            self.load_text_data(file_path_white='D:/database/data1_white.txt', file_path_black='D:/database/data1_black.txt')
 
         discount_rate = 0.9
         
@@ -439,39 +442,66 @@ class ChessEngine():
 
         print('save_start')
 
-        file = open(f'D:/database/{file_name}_white.txt', "w+")
-        for keys in self.white:
-            file.write(f'{keys}\t{self.white[keys]}\n')
-        file.close()
+        start = time.time()
 
-        file = open(f'D:/database/{file_name}_black.txt', "w+")
-        for keys in self.black:
-            file.write(f'{keys}\t{self.black[keys]}\n')
-        file.close()
+        # white 파일 쓰기
+        with open(f'D:/database/{file_name}_white.txt', "w", buffering=100*1024*1024) as white_file:
+            for key, value in tqdm(self.white.items(), desc='white file writing'):
+                white_file.write(f'{key}\t{value}\n')
+
+        # black 파일 쓰기
+        with open(f'D:/database/{file_name}_black.txt', "w", buffering=100*1024*1024) as black_file:
+            for key, value in tqdm(self.black.items(), desc='black file writing'):
+                black_file.write(f'{key}\t{value}\n')
 
         print('save_done')
+        print(f'{time.time() - start}s')
 
 
-    def load_text_data(self, file_path_white : str, file_path_black : str):
-
+    def load_text_data(self, file_path_white: str, file_path_black: str, chunk_size=100*1024*1024):
         print('load_start')
 
         start = time.time()
+        remaining_text = ""  # 이전 청크에서 남은 텍스트
+
+        def process_chunk(chunk, data_dict):
+            nonlocal remaining_text
+            chunk = remaining_text + chunk
+            lines = chunk.split('\n')
+            for i in range(len(lines) - 1):
+                line = lines[i]
+                if line:
+                    key, value = line.strip().split('\t')
+                    try:
+                        data_dict[key] = eval(value)
+                    except:
+                        try:
+                            data_dict[key] = eval(value + ']')
+                        except:
+                            data_dict[key] = eval(value + ']]')
+            remaining_text = lines[-1]  # 마지막 줄은 다음 청크와 합쳐집니다.
 
         with open(file_path_white, 'r') as file:
-            for line in file:
-                key, value = line.strip().split('\t')
-                self.white[key] = eval(value)
+            file_size = os.path.getsize(file_path_white)
+            with tqdm(total=file_size, desc='white file loading', unit='B', unit_scale=True) as pbar:
+                chunk = file.read(chunk_size)
+                while chunk:
+                    process_chunk(chunk, self.white)
+                    pbar.update(len(chunk))
+                    chunk = file.read(chunk_size)
 
-        print(f'white done {time.time() - start}')
-        start = time.time()
+        print(f'white done {time.time() - start}s')
 
         with open(file_path_black, 'r') as file:
-            for line in file:
-                key, value = line.strip().split('\t')
-                self.black[key] = eval(value)
-        
-        print(f'black done {time.time() - start}')
+            file_size = os.path.getsize(file_path_black)
+            with tqdm(total=file_size, desc='black file loading', unit='B', unit_scale=True) as pbar:
+                chunk = file.read(chunk_size)
+                while chunk:
+                    process_chunk(chunk, self.black)
+                    pbar.update(len(chunk))
+                    chunk = file.read(chunk_size)
+
+        print(f'black done {time.time() - start}s')
 
         print('load_done')
         
@@ -584,7 +614,8 @@ class ChessEngine():
 
 
     def visualize(self):
-        self.playing()
+        self.load_text_data(file_path_white='D:/database/data1_white.txt', file_path_black='D:/database/data1_black.txt')
+        self.save_as_txt_file('data1')
 
 a = ChessEngine()
 
