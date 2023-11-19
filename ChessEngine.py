@@ -78,7 +78,7 @@ class ChessEngine():
         return False
 
 
-    def move_agent(self, board : str, movement : str, turn : int) -> tuple[str, int]:
+    def move_agent(self, board : str, movement : str) -> tuple[str, int]:
         """
         board에 movement를 반영한다.
         agent가 학습을 할 때에만 사용하는 함수이다.(movement가 이미 검증된 함수)
@@ -86,9 +86,8 @@ class ChessEngine():
         """
 
         board.push_san(movement)
-        turn += 1
 
-        return board, turn
+        return board
 
 
     def move_player(self, board : str, movement : str, turn : int) -> tuple[bool, str, int]:
@@ -106,62 +105,7 @@ class ChessEngine():
             return False, board, turn
 
 
-    def return_reward_white(self, result_judgement_end : tuple[bool, bool]) -> float:
-        """
-        백에게 보상을 부여해준다.
-        시간복잡도 : O(1)
-        """
-        color = result_judgement_end[0]
-        win_or_draw = result_judgement_end[1]
-
-        if color == True: # 백
-
-            if win_or_draw == False: # stalemate
-                return -0.2
-            else: # checkmate
-                return -1
-            
-        elif color == False: # 흑
-
-            if win_or_draw == False: # stalemate
-                return -0.2
-            else:
-                return 1
-            
-        else:
-
-            return -0.01
-
-
-    def return_reward_black(self, result_judgement_end : tuple[bool, bool]) -> float:
-        """
-        흑에게 보상을 부여해준다.
-        시간복잡도 : O(1)
-        """
-
-        color = result_judgement_end[0]
-        win_or_draw = result_judgement_end[1]
-
-        if color == True: # 백
-
-            if win_or_draw == False: # stalemate
-                return -0.2
-            else: # checkmate
-                return 1
-            
-        elif color == False: # 흑
-
-            if win_or_draw == False: # stalemate
-                return -0.2
-            else:
-                return -1
-            
-        else:
-
-            return -0.01
-
-
-    def evaluate(self, board):
+    def evaluate(self, board, color):
     
         PawnValue = 100
         KnightValue = 300
@@ -178,7 +122,7 @@ class ChessEngine():
 
 
         def countPiece(board, color):
-            board_fen = list(board.fen())[0]
+            board_fen = board.fen().split(" ")[0]
             PieceList = ['p', 'n', 'b', 'r', 'q']
             if color == True:
                 for i in range(5):
@@ -495,9 +439,7 @@ class ChessEngine():
         whiteEval = whiteMaterialScore + whitePieceSquareScore + whiteMopUpScore + whitePawnScore
         blackEval = blackMaterialScore + blackPieceSquareScore + blackMopUpScore + blackPawnScore
 
-        color = board.turn
-
-        if color == chess.WHITE:
+        if color == True:
             return whiteEval - blackEval
         else:
             return blackEval - whiteEval
@@ -520,6 +462,7 @@ class ChessEngine():
         if color == True: # 백
 
             if state in self.white:
+                self.white[state][3] = self.generate_probability(len=len(action_list))
                 return True
             else:
                 action_list = self.legal_action(board)
@@ -533,6 +476,7 @@ class ChessEngine():
         else:
 
             if state in self.black:
+                self.black[state][3] = self.generate_probability(len=len(action_list))
                 return True
             else:
                 action_list = self.legal_action(board)
@@ -605,7 +549,7 @@ class ChessEngine():
         시간복잡도 : O(n)
         """
 
-        epslion = 0.5
+        epslion = 0.1
 
         if param:
             return [1 / len for i in range(len)]
@@ -647,73 +591,29 @@ class ChessEngine():
             return action[0]
 
 
-    def generate_episode(self) -> tuple[dict, dict, list, list, int]:
-        """
-        b에 따른 에피소드를 생성한다
-        시간복잡도 : O(n)
-        """
+    def calcV(self, state, color):
 
-        episode_white = {}
-        episode_black = {}
-        state_list_white = []
-        state_list_black = []
-        board = chess.Board()
-        turn = 0
+        V = 0
 
-        # pgn_list = chess.pgn.Game() # PGN
+        if color == True:
+            
+            white_list = self.white[state]
 
-        while self.judgement_end(board, turn) == (6, 6):
+            for i in range(white_list[0]):
 
-            self.judgement_state(board, color=((turn % 2)==0))
+                V += white_list[3][i] * white_list[2][i]
 
-            if turn % 2 == 0: # 백이라면
+            return V
 
-                color = True
-                state = self.state_converter(board.fen())
+        else:
 
-                state_list_white.append(state)
-                action = self.choose_action(state, color)
-                return_move_agent = self.move_agent(board, action, turn)
-                board = return_move_agent[0]
-                turn = return_move_agent[1]
+            black_list = self.black[state]
 
-                if state in episode_white:
-                    pass
-                else:
-                    episode_white[state] = [action, self.return_reward_white(self.judgement_end(board, turn))]
+            for i in range(black_list[0]):
 
-            else: # 흑이라면
+                V += black_list[3][i] * black_list[2][i]
 
-                color = False
-                state = self.state_converter(board.fen())
-
-                state_list_black.append(state)
-                action = self.choose_action(state, color)
-                return_move_agent = self.move_agent(board, action, turn)
-                board = return_move_agent[0]
-                turn = return_move_agent[1]
-
-                if state in episode_black:
-                    pass
-                else:
-                    episode_black[state] = [action, self.return_reward_black(self.judgement_end(board, turn))]
-                # node = node.add_variation(chess.Move.from_uci(action)) # PGN
-                    
-        # print(pgn_list) # PGN
-
-        if episode_black[state_list_black[-1]][1] == 1:
-            episode_white[state_list_white[-1]][1] = -1
-        
-        elif episode_black[state_list_black[-1]][1] == -0.2:
-            episode_white[state_list_white[-1]][1] = -0.2
-        
-        elif episode_white[state_list_white[-1]][1] == 1:
-            episode_black[state_list_black[-1]][1] = -1
-
-        elif episode_white[state_list_white[-1]][1] == -0.2:
-            episode_black[state_list_black[-1]][1] = -0.2
-
-        return episode_white, episode_black, state_list_white, state_list_black, turn
+            return V
 
 
     def learning(self, times=10 ** 8 + 1):
@@ -722,68 +622,78 @@ class ChessEngine():
             self.load_text_data(file_path_white='D:/database/data2_white.txt', file_path_black='D:/database/data2_black.txt')
 
         discount_rate = 0.9
+
+        for time in range(times):
+
+            state_list = []
+            action_list = []
+            reward_list = [None]
+            T = float('inf')
+            t = 0
+            n = 1
+
+            board = chess.Board()
+
+            if self.judgement_state(board, color=True):
+                action = self.choose_action(state=self.state_converter(board.fen()))
+
+            state_list.append(self.state_converter(board.fen()))
+            action_list.append(action)
+
+            while t != r:
+                
+                if t < T:
+                    # 행동 A_t를 취하고, 다음 보상과 상태를 R_t+1, S_t+1로 측정하고 저장
+                    board.push_san(action)
+                    self.judgement_state(board, color=(board.turn))
+                    state_list.append(self.state_converter(board.fen()))
+                    reward_list.append(self.evaluate(board, color=(not board.turn)))
+
+                    if self.judgement_end(board, turn=t+1) != (6, 6):
+                        T = t + 1
+                    else:
+                        action = self.choose_action(state=self.state_converter(board.fen()))
+                        action_list.append(action)
+
+                r = t - n + 1
+
+                if r >= 0:
+
+                    if t + 1 < T:
+
+                        if (t + 1) % 2 == 0: # white
+
+                            G = self.white[state_list[t + 1]][2][self.judgement_action(state=state_list[t + 1], action=action_list[t + 1], color=True)]
+
+                        else:
+
+                            G = self.black[state_list[t + 1]][2][self.judgement_action(state=state_list[t + 1], action=action_list[t + 1], color=False)]
+
+                    for k in range(min(t + 1, T), r + 2):
+
+                        if k == T:
+
+                            G = reward_list[T]
+                        
+                        else:
+
+                            V = self.calcV(state=state_list[k], color=(k % 2 == 0))
+                            G = reward_list[k] + discount_rate * (discount_rate ** k + (1 - discount_rate ** k) * self.)
+
+
         
-        start = time.time()
 
-        for i in range(times):
 
-            if i % 10000 == 0 and i != 0:
-                self.save_as_txt_file('data2')
 
-            start_episode = time.time()
+            
+                
 
-            return_generate_episode = self.generate_episode()
 
-            end_episode = time.time()
+        
+            
+                    
 
-            G_white = 0
-            G_black = 0
-            W_white = 1
-            W_black = 1
-
-            episode_white = return_generate_episode[0]
-            episode_black = return_generate_episode[1]
-            state_list_white = return_generate_episode[2]
-            state_list_black = return_generate_episode[3]
-            turn = return_generate_episode[4]
-
-            calc_start = time.time()
-
-            for t in range((turn // 2) - 1, -1, -1): # 흑
-
-                state = state_list_black[t]
-                action = episode_black[state][0]
-
-                G_black = discount_rate * G_black + episode_black[state][1]
-                action_index = self.judgement_action(state, action, color=False)
-
-                self.black[state][1][action_index] += W_black
-                self.black[state][2][action_index] += (W_black / self.black[state][1][action_index]) * (G_black - self.black[state][2][action_index])
-                optimal_action = self.find_optimal_policy(state, color=False)
-
-                if episode_black[state][0] != optimal_action:
-                    break
-                else:
-                    W_black *= 1 / self.black[state][3][action_index]
-
-            for t in range((turn // 2) - 1, -1, -1): # 백
-
-                state = state_list_white[t]
-                action = episode_white[state][0]
-
-                G_white = discount_rate * G_white + episode_white[state][1]
-                action_index = self.judgement_action(state, action, color=True)
-
-                self.white[state][1][action_index] += W_white
-                self.white[state][2][action_index] += (W_white / self.white[state][1][action_index]) * (G_white - self.white[state][2][action_index])
-                optimal_action = self.find_optimal_policy(state, color=True)
-
-                if episode_white[state][0] != optimal_action:
-                    break
-                else:
-                    W_white *= 1 / self.white[state][3][action_index]
-
-            print(f'{i}times\t{time.time() - start}s\t{- start_episode + end_episode}s\t{time.time() - calc_start}s')
+            
 
 
     def save_as_txt_file(self, file_name : str):
