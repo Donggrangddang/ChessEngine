@@ -1,176 +1,420 @@
 import chess
-import chess.pgn
+import time
 
-class ChessEngine():
-
+class ChessEngine:
+    
     def __init__(self):
         self.board = chess.Board()
+        self.cutoff_count = 0
+        self.eval_called = 0
+        self.turn = 0
 
 
-    def getLegalMoves(self, board : str) -> list:
-        """get lagal moves in board"""
+    def evaluate(self):
 
-        legal_moves = board.legal_moves
-        return legal_moves
+        self.eval_called += 1
+    
+        PawnValue = 100
+        KnightValue = 300
+        BishopValue = 320
+        RookValue = 500
+        QueenValue = 900
+
+        PieceValueList = (PawnValue, KnightValue, BishopValue, RookValue, QueenValue)
+        passedPawnBonuses = (0, 120, 80, 50, 30, 15, 15)
+        isolatedPawnPenaltyByCount = (0, -10, -25, -50, -75, -75, -75, -75, -75)
+        kingPawnShieldScores = (4, 7, 4, 3, 6, 3)
+
+        endgameMaterialStart = RookValue * 2 + BishopValue + KnightValue
 
 
-    def evaluate(self, board : str) -> int:
-        """evaluate curr state's value"""
-
-        def count_pieces(board : chess.Board, color : bool) -> int:
-
-            board_fen = list(board.fen().split(' '))[0]
-            piece_type = ['p', 'n', 'b', 'r', 'q']
+        def countPiece(color):
+            board_fen = self.board.fen().split(" ")[0]
+            PieceList = ['p', 'n', 'b', 'r', 'q']
             if color == True:
                 for i in range(5):
-                    piece_type[i] = piece_type[i].upper()
+                    PieceList[i] = PieceList[i].upper()
 
-            count_pawn = board_fen.count(piece_type[0])
-            count_knight = board_fen.count(piece_type[1])
-            count_bishop = board_fen.count(piece_type[2])
-            count_rook = board_fen.count(piece_type[3])
-            count_queen = board_fen.count(piece_type[4])
+            PawnCount = board_fen.count(PieceList[0])
+            KnightCount = board_fen.count(PieceList[1])
+            BishopCount = board_fen.count(PieceList[2])
+            RookCount = board_fen.count(PieceList[3])
+            QueenCount = board_fen.count(PieceList[4])
 
-            count_list = [
-                count_pawn,
-                count_knight,
-                count_bishop,
-                count_rook,
-                count_queen
-            ]
+            return PawnCount, KnightCount, BishopCount, RookCount, QueenCount
 
-            return count_list
+
+        def materialScore(color):
+
+            countPieceList = countPiece(color)
+            materialScore = 0
+            for i in range(5):
+                materialScore += countPieceList[i] * PieceValueList[i]
+
+            return materialScore
+
+
+        def setEndgameT(color):
+
+            pieceCountList = countPiece(color)
+            endgameStartWeight = 125
+            endgameWeightSum = pieceCountList[4] * 45 + pieceCountList[3] * 20 + pieceCountList[2] * 10 + pieceCountList[1] * 10
+            endgameT = 1 - min(1, endgameWeightSum / endgameStartWeight)
+
+            return endgameT
+
+
+        def evaluatePieceSquareTables(color, endgameT):
+
+            Pawns = (
+            (0,   0,   0,   0,   0,   0,   0,   0),
+            (50,  50,  50,  50,  50,  50,  50,  50),
+            (10,  10,  20,  30,  30,  20,  10,  10),
+            (5,   5,  10,  25,  25,  10,   5,   5),
+            (0,   0,   0,  20,  20,   0,   0,   0),
+            (5,  -5, -10,   0,   0, -10,  -5,   5),
+            (5,  10,  10, -20, -20,  10,  10,   5),
+            (0,   0,   0,   0,   0,   0,   0,   0)
+            )
+
+            PawnsEnd = (
+            (0,   0,   0,   0,   0,   0,   0,   0),
+            (80,  80,  80,  80,  80,  80,  80,  80),
+            (50,  50,  50,  50,  50,  50,  50,  50),
+            (30,  30,  30,  30,  30,  30,  30,  30),
+            (20,  20,  20,  20,  20,  20,  20,  20),
+            (10,  10,  10,  10,  10,  10,  10,  10),
+            (10,  10,  10,  10,  10,  10,  10,  10),
+            (0,   0,   0,   0,   0,   0,   0,   0)
+            )
+
+            Rooks =  (
+            (0,  0,  0,  0,  0,  0,  0,  0),
+            (5, 10, 10, 10, 10, 10, 10,  5),
+            (-5,  0,  0,  0,  0,  0,  0, -5),
+            (-5,  0,  0,  0,  0,  0,  0, -5),
+            (-5,  0,  0,  0,  0,  0,  0, -5),
+            (-5,  0,  0,  0,  0,  0,  0, -5),
+            (-5,  0,  0,  0,  0,  0,  0, -5),
+            (0,  0,  0,  5,  5,  0,  0,  0)
+            )
+
+            Knights = (
+            (-50,-40,-30,-30,-30,-30,-40,-50),
+            (-40,-20,  0,  0,  0,  0,-20,-40),
+            (-30,  0, 10, 15, 15, 10,  0,-30),
+            (-30,  5, 15, 20, 20, 15,  5,-30),
+            (-30,  0, 15, 20, 20, 15,  0,-30),
+            (-30,  5, 10, 15, 15, 10,  5,-30),
+            (-40,-20,  0,  5,  5,  0,-20,-40),
+            (-50,-40,-30,-30,-30,-30,-40,-50),
+            )
+
+            Bishops =  (
+            (-20,-10,-10,-10,-10,-10,-10,-20),
+            (-10,  0,  0,  0,  0,  0,  0,-10),
+            (-10,  0,  5, 10, 10,  5,  0,-10),
+            (-10,  5,  5, 10, 10,  5,  5,-10),
+            (-10,  0, 10, 10, 10, 10,  0,-10),
+            (-10, 10, 10, 10, 10, 10, 10,-10),
+            (-10,  5,  0,  0,  0,  0,  5,-10),
+            (-20,-10,-10,-10,-10,-10,-10,-20),
+            )
+
+            Queens =  (
+            (-20,-10,-10, -5, -5,-10,-10,-20),
+            (-10,  0,  0,  0,  0,  0,  0,-10),
+            (-10,  0,  5,  5,  5,  5,  0,-10),
+            (-5,  0,  5,  5,  5,  5,  0, -5),
+            (0,  0,  5,  5,  5,  5,  0, -5),
+            (-10,  5,  5,  5,  5,  5,  0,-10),
+            (-10,  0,  5,  0,  0,  0,  0,-10),
+            (-20,-10,-10, -5, -5,-10,-10,-20)
+            )
+
+            KingStart = (
+            (-80, -70, -70, -70, -70, -70, -70, -80), 
+            (-60, -60, -60, -60, -60, -60, -60, -60),
+            (-40, -50, -50, -60, -60, -50, -50, -40),
+            (-30, -40, -40, -50, -50, -40, -40, -30), 
+            (-20, -30, -30, -40, -40, -30, -30, -20), 
+            (-10, -20, -20, -20, -20, -20, -20, -10), 
+            (20, 20, -5, -5, -5, -5, 20, 20), 
+            (20, 30, 10, 0, 0, 10, 30, 20)
+            )
+
+            KingEnd = (
+            (-20, -10, -10, -10, -10, -10, -10, -20),
+            (-5, 0, 5, 5, 5, 5, 0, -5), 
+            (-10, -5, 20, 30, 30, 20, -5, -10), 
+            (-15, -10, 35, 45, 45, 35, -10, -15), 
+            (-20, -15, 30, 40, 40, 30, -15, -20), 
+            (-25, -20, 20, 25, 25, 20, -20, -25), 
+            (-30, -25, 0, 0, 0, 0, -25, -30), 
+            (-50, -30, -30, -30, -30, -30, -30, -50)
+            )
+
+
+            value = 0
+
+            if color == True: # WHITE
+
+                for square in chess.SQUARES:
+                    piece = self.board.piece_at(square)
+                    if piece is not None and piece.symbol() == 'P' and piece.color == chess.WHITE:
+                        value += Pawns[7 - chess.square_rank(square)][chess.square_file(square)] * (1 - endgameT)
+                        value += PawnsEnd[7 - chess.square_rank(square)][chess.square_file(square)] * endgameT
+                    elif piece is not None and piece.symbol() == 'N' and piece.color == chess.WHITE: 
+                        value += Knights[7 - chess.square_rank(square)][chess.square_file(square)]
+                    elif piece is not None and piece.symbol() == 'B' and piece.color == chess.WHITE: 
+                        value += Bishops[7 - chess.square_rank(square)][chess.square_file(square)]
+                    elif piece is not None and piece.symbol() == 'R' and piece.color == chess.WHITE: 
+                        value += Rooks[7 - chess.square_rank(square)][chess.square_file(square)]
+                    elif piece is not None and piece.symbol() == 'Q' and piece.color == chess.WHITE: 
+                        value += Queens[7 - chess.square_rank(square)][chess.square_file(square)]
+                    elif piece is not None and piece.symbol() == 'K' and piece.color == chess.WHITE and endgameT == 0:
+                        value += KingStart[7 - chess.square_rank(square)][chess.square_file(square)]
+                    elif piece is not None and piece.symbol() == 'K' and piece.color == chess.WHITE and endgameT == 1:
+                        value += KingEnd[7 - chess.square_rank(square)][chess.square_file(square)]
+
+            else: # BLACK
+
+                    for square in chess.SQUARES:
+                        piece = self.board.piece_at(square)
+                        if piece is not None and piece.symbol() == 'p' and piece.color == chess.BLACK:
+                            value += Pawns[chess.square_rank(square)][7 - chess.square_file(square)] * (1 - endgameT)
+                            value += PawnsEnd[chess.square_rank(square)][7 - chess.square_file(square)] * endgameT
+                        elif piece is not None and piece.symbol() == 'n' and piece.color == chess.BLACK: 
+                            value += Knights[chess.square_rank(square)][7 - chess.square_file(square)]
+                        elif piece is not None and piece.symbol() == 'b' and piece.color == chess.BLACK: 
+                            value += Bishops[chess.square_rank(square)][7 - chess.square_file(square)]
+                        elif piece is not None and piece.symbol() == 'r' and piece.color == chess.BLACK: 
+                            value += Rooks[chess.square_rank(square)][7 - chess.square_file(square)]
+                        elif piece is not None and piece.symbol() == 'q' and piece.color == chess.BLACK: 
+                            value += Queens[chess.square_rank(square)][7 - chess.square_file(square)]
+                        elif piece is not None and piece.symbol() == 'K' and piece.color == chess.BLACK and endgameT == 0:
+                            value += KingStart[chess.square_rank(square)][7 - chess.square_file(square)]
+                        elif piece is not None and piece.symbol() == 'K' and piece.color == chess.BLACK and endgameT == 1:
+                            value += KingEnd[chess.square_rank(square)][7 - chess.square_file(square)]
+
+            return value
+
+
+        def mopUpEval(color, enemyEndgameT, whiteMaterialScore, blackMaterialScore):
+
+
+            def findKing(color):
+                
+                if color == True:
+                    for square in chess.SQUARES:
+                        piece = self.board.piece_at(square)
+                        if piece is not None and piece.symbol() == 'K' and piece.color == chess.WHITE:
+                            return chess.square_rank(square), chess.square_file(square)
+                
+                else:
+                    for square in chess.SQUARES:
+                        piece = self.board.piece_at(square)
+                        if piece is not None and piece.symbol() == 'k' and piece.color == chess.BLACK:
+                            return chess.square_rank(square), chess.square_file(square)
+
+
+            if whiteMaterialScore > blackMaterialScore + PawnValue * 2 and enemyEndgameT > 0:
+
+                mopUpScore = 0
+                friendlyColor = color
+                enemyColor = not color
+
+                friendlyKingSquare = findKing(friendlyColor)
+                enemyKingSquare = findKing(enemyColor)
+                # Encourage moving king closer to opponent king
+                mopUpScore += (14 - abs(friendlyKingSquare[0] - enemyKingSquare[0]) - abs(friendlyKingSquare[1] - enemyKingSquare[1]))
+                # Encourage pushing opponent king to edge of board
+                mopUpScore += (max(3 - enemyKingSquare[0], enemyKingSquare[0] - 4) + max(3 - enemyKingSquare[1], enemyKingSquare[1] - 4)) * 10
+
+                return mopUpScore * enemyEndgameT
+            
+            return 0
+
+
+        def evaluatePawns(color):
+
+
+            def findPawn(color):
+
+                pawnPosition = []
+                    
+                if color == True:
+                    for square in chess.SQUARES:
+                        piece = self.board.piece_at(square)
+                        if piece is not None and piece.symbol() == 'P' and piece.color == chess.WHITE:
+                            pawnPosition.append((chess.square_rank(square), chess.square_file(square)))
+                
+                else:
+                    for square in chess.SQUARES:
+                        piece = self.board.piece_at(square)
+                        if piece is not None and piece.symbol() == 'p' and piece.color == chess.BLACK:
+                            pawnPosition.append((chess.square_rank(square), chess.square_file(square)))
+
+                return pawnPosition
+            
+            bonus = 0
+
+            pawnPositions = findPawn(color)
+            numPassedPawn = 0
+            numIsolatedPawn = 0
+            numSquaresFromPromotion = []
+
+
+            for position in pawnPositions:
+
+                passed_pawn = True
+                isolated_pawn = True
+
+                if color == True:
+
+                    for file in range(position[1] - 1, position[1] + 2, 1):
+
+                        for rank in range(position[0] + 1, 8, 1):
+                            square = chess.square(file, rank)
+                            if self.board.piece_at(square) == 'p':
+                                passed_pawn = False
+                                break
+                        
+                        for rank in range(0, 8, 1):
+                            square = chess.square(file, rank)
+                            if self.board.piece_at(square) == 'P':
+                                isolated_pawn = False
+                                break
+                        
+                        break
+                    
+                    if passed_pawn:
+                        numPassedPawn += 1
+                        numSquaresFromPromotion.append(7 - position[0])
+                    
+                    if isolated_pawn:
+                        numIsolatedPawn += 1
+
+                else:
+
+                    for file in range(position[1] - 1, position[1] + 2, 1):
+    
+                        for rank in range(position[0] - 1, -1, -1):
+                            square = chess.square(file, rank)
+                            if self.board.piece_at(square) == 'P':
+                                passed_pawn = False
+                                break
+                        
+                        for rank in range(0, 8, 1):
+                            square = chess.square(file, rank)
+                            if self.board.piece_at(square) == 'p':
+                                isolated_pawn = False
+                                break
+                        
+                        break
+                    
+                    if passed_pawn:
+                        numPassedPawn += 1
+                        numSquaresFromPromotion.append(position[0])
+                    
+                    if isolated_pawn:
+                        numIsolatedPawn += 1
+
+            for i in range(numPassedPawn):
+                bonus += passedPawnBonuses[numSquaresFromPromotion[i]]
+
+            return bonus + isolatedPawnPenaltyByCount[numIsolatedPawn]
+
+
+        # endgameT 설정 다시하기
+        whiteEndgameT = setEndgameT(color=True)
+        blackEndgameT = setEndgameT(color=False)
+
+        # Score based on number and type of pieces on board
+        whiteMaterialScore = materialScore(color=True)
+        blackMaterialScore = materialScore(color=False)
+        # Score based on positions of pieces
+        whitePieceSquareScore = evaluatePieceSquareTables(color=True, endgameT=whiteEndgameT)
+        blackPieceSquareScore = evaluatePieceSquareTables(color=False, endgameT=blackEndgameT)
+		# Encourage using own king to push enemy king to edge of board in winning endgame
+        whiteMopUpScore = mopUpEval(color=True, enemyEndgameT=blackEndgameT, whiteMaterialScore=whiteMaterialScore, blackMaterialScore=blackMaterialScore)
+        blackMopUpScore = mopUpEval(color=False, enemyEndgameT=whiteEndgameT, whiteMaterialScore=whiteMaterialScore, blackMaterialScore=blackMaterialScore)
+
+        whitePawnScore = evaluatePawns(color=True)
+        blackPawnScore = evaluatePawns(color=False)
         
-        def countMaterial(count_list : list) -> int:
+        whiteEval = whiteMaterialScore + whitePieceSquareScore + whiteMopUpScore + whitePawnScore
+        blackEval = blackMaterialScore + blackPieceSquareScore + blackMopUpScore + blackPawnScore
 
-            pawnValue = 100
-            knightValue = 300
-            bishopValue = 350
-            rookValue = 500
-            queenValue = 900
+        color = self.turn
 
-            material = 0
-            material += count_list[0] * pawnValue
-            material += count_list[1] * knightValue
-            material += count_list[2] * bishopValue
-            material += count_list[3] * rookValue
-            material += count_list[4] * queenValue
-
-            return material
-        
-        white_eval = countMaterial(count_pieces(board=board, color=True))
-        black_eval = countMaterial(count_pieces(board=board, color=False))
-
-        evaluation = white_eval - black_eval
-        if board.turn == True: # white turn
-            return evaluation
-        else:
-            return -evaluation
+        return whiteEval - blackEval
 
 
-    def legalMovement(self, board : str) -> list:
-        """
-        state에서 가능한 Action 반환한다.
-        시간복잡도 : O(n)
-        """
-
-        legal_moves_raw = list(board.legal_moves)
-        legal_movements = []
-
-        for i in range(len(legal_moves_raw)):
-            append_legal_movement = str(legal_moves_raw[i]).replace('Move.from_uci(', '')
-            append_legal_movement = append_legal_movement.replace(')', '')
-            legal_movements.append(append_legal_movement)
-
-        return legal_movements
-
-
-    def search(self, board : str, depth : int, alpha : int, beta : int) -> int:
-
+    def alphabeta_max(self, alpha, beta, depth, returnBestMove=False):
         if depth == 0:
-            return self.evaluate(board)
-
-        legal_movements = self.legalMovement(board)
-
-        if len(legal_movements) == 0:
-            if board.is_check() == True:
-                return float("-inf")
-            else:
-                return 0
-
-        for move in legal_movements:
-            board = self.move(board, move)
-            evaluation = -self.search(board, depth - 1, alpha, beta)
-            board = self.unMakeMove(board, move)
-            if evaluation >= beta:
-                return beta
-            alpha = max(alpha, evaluation)
+            return self.evaluate()
         
+        best_move = None
+
+        for move in self.board.legal_moves:
+            self.board.push(move)
+            score = self.alphabeta_min(alpha, beta, depth - 1)
+            self.board.pop()
+            if score > alpha:
+                alpha = score
+                best_move = move
+            if alpha >= beta:
+                break
+
+        if returnBestMove:
+            return best_move
         return alpha
 
 
-    def find_best_move(self, board, depth):
+    def alphabeta_min(self, alpha, beta, depth, returnBestMove=False):
+        if depth == 0:
+            return self.evaluate()
+        
+        best_move = None
+
+        for move in self.board.legal_moves:
+            self.board.push(move)
+            score = self.alphabeta_max(alpha, beta, depth - 1)
+            self.board.pop()
+            if score < beta:
+                beta = score
+                best_move = move
+            if alpha >= beta:
+                self.cutoff_count += 1
+                break
+
+        if returnBestMove:
+            return best_move
+        return beta
+
+
+    def find_best_move(self, depth):
 
         best_move = None
-        alpha = float("-inf")
-        beta = float("inf")
-
-        legal_movements = self.legalMovement(board)
-
-        for move in legal_movements:
-            board = self.move(board, move)
-            evaluation = -self.search(board, depth - 1, -beta, -alpha)
-            board = self.unMakeMove(board, move)
-
-            if evaluation > alpha:
-                alpha = evaluation
-                best_move = move
-
-        print(best_move)
-
+        if self.board.turn:
+            best_move = self.alphabeta_max(float('-inf'), float('inf'), depth, True)
+        else:
+            best_move = self.alphabeta_min(float('-inf'), float('inf'), depth, True)
+        
         return best_move
 
 
-    def testLegalMovement(self, board, depth):
-        if depth == 0:
-            return 1
-        
-        moves = self.legalMovement(board)
-        numposition = 0
-
-        for move in moves:
-            board.push_san(move)
-            numposition += self.testLegalMovement(board, depth - 1)
-            board.pop()
-
-        return numposition
-
-
     def run(self):
-        '''board = chess.Board()
-        game = chess.pgn.Game()
-        turn = 0
-        while True:
-            movement = self.find_best_move(board, depth=4)
-            board = self.move(board, movement)
-            if turn == 0:
-                node = game.add_variation(chess.Move.from_uci(movement))
-            else:
-                node = node.add_variation(chess.Move.from_uci(movement))
-
-            turn += 1
-
-            print(str(game))'''
-
-        board = chess.Board('r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ')
-        print(self.testLegalMovement(board, depth=1))
-        print(self.testLegalMovement(board, depth=2))
-        print(self.testLegalMovement(board, depth=3))
-        print(self.testLegalMovement(board, depth=4))
-        print(self.testLegalMovement(board, depth=5))
+        self.board.set_fen('r1b1kbnr/2p2ppp/p1p5/3p4/3qP1N1/3PB3/PPP2PPP/RN1QK2R b KQkq - 1 8')
+        start = time.time()
+        print(f'Current Position moves: {self.board.legal_moves.count()}')
+        print(f'Best Move: {self.find_best_move(5)}')
+        print(f'Time: {time.time() - start}')
+        print(f'Eval called: {self.eval_called}')
+        print(f'Cuttoff count: {self.cutoff_count}')
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     a = ChessEngine()
-    a.run()
+    a.run() 
