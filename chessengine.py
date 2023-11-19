@@ -1,16 +1,42 @@
 import chess
 import time
+import chess.pgn
+import datetime
 
 class ChessEngine:
     
     def __init__(self):
-        self.board = chess.Board()
         self.cutoff_count = 0
         self.eval_called = 0
         self.turn = 0
 
 
-    def evaluate(self):
+    def judgement_end(self, board : str, turn : int) -> tuple[bool, bool] or tuple[6, 6]:
+        """
+        board의 현재 상황이 무승부인지, 체크 메이트인지, 끝나지 않았는지 확인한다.
+        시간복잡도 : O(1)
+        """
+
+        if board.is_stalemate() == True or board.is_insufficient_material() == True or board.can_claim_draw == True:
+
+            if turn % 2 == 0:
+                return True, False
+            else:
+                return False, False
+            
+        elif board.is_checkmate() == True:
+
+            if turn % 2 == 0:
+                return True, True
+            else:
+                return False, True
+
+        else:
+
+            return (6, 6)
+
+        
+    def evaluate(self, board):
 
         self.eval_called += 1
     
@@ -29,7 +55,7 @@ class ChessEngine:
 
 
         def countPiece(color):
-            board_fen = self.board.fen().split(" ")[0]
+            board_fen = board.fen().split(" ")[0]
             PieceList = ['p', 'n', 'b', 'r', 'q']
             if color == True:
                 for i in range(5):
@@ -160,7 +186,7 @@ class ChessEngine:
             if color == True: # WHITE
 
                 for square in chess.SQUARES:
-                    piece = self.board.piece_at(square)
+                    piece = board.piece_at(square)
                     if piece is not None and piece.symbol() == 'P' and piece.color == chess.WHITE:
                         value += Pawns[7 - chess.square_rank(square)][chess.square_file(square)] * (1 - endgameT)
                         value += PawnsEnd[7 - chess.square_rank(square)][chess.square_file(square)] * endgameT
@@ -180,7 +206,7 @@ class ChessEngine:
             else: # BLACK
 
                     for square in chess.SQUARES:
-                        piece = self.board.piece_at(square)
+                        piece = board.piece_at(square)
                         if piece is not None and piece.symbol() == 'p' and piece.color == chess.BLACK:
                             value += Pawns[chess.square_rank(square)][7 - chess.square_file(square)] * (1 - endgameT)
                             value += PawnsEnd[chess.square_rank(square)][7 - chess.square_file(square)] * endgameT
@@ -207,13 +233,13 @@ class ChessEngine:
                 
                 if color == True:
                     for square in chess.SQUARES:
-                        piece = self.board.piece_at(square)
+                        piece = board.piece_at(square)
                         if piece is not None and piece.symbol() == 'K' and piece.color == chess.WHITE:
                             return chess.square_rank(square), chess.square_file(square)
                 
                 else:
                     for square in chess.SQUARES:
-                        piece = self.board.piece_at(square)
+                        piece = board.piece_at(square)
                         if piece is not None and piece.symbol() == 'k' and piece.color == chess.BLACK:
                             return chess.square_rank(square), chess.square_file(square)
 
@@ -245,13 +271,13 @@ class ChessEngine:
                     
                 if color == True:
                     for square in chess.SQUARES:
-                        piece = self.board.piece_at(square)
+                        piece = board.piece_at(square)
                         if piece is not None and piece.symbol() == 'P' and piece.color == chess.WHITE:
                             pawnPosition.append((chess.square_rank(square), chess.square_file(square)))
                 
                 else:
                     for square in chess.SQUARES:
-                        piece = self.board.piece_at(square)
+                        piece = board.piece_at(square)
                         if piece is not None and piece.symbol() == 'p' and piece.color == chess.BLACK:
                             pawnPosition.append((chess.square_rank(square), chess.square_file(square)))
 
@@ -276,13 +302,13 @@ class ChessEngine:
 
                         for rank in range(position[0] + 1, 8, 1):
                             square = chess.square(file, rank)
-                            if self.board.piece_at(square) == 'p':
+                            if board.piece_at(square) == 'p':
                                 passed_pawn = False
                                 break
                         
                         for rank in range(0, 8, 1):
                             square = chess.square(file, rank)
-                            if self.board.piece_at(square) == 'P':
+                            if board.piece_at(square) == 'P':
                                 isolated_pawn = False
                                 break
                         
@@ -301,13 +327,13 @@ class ChessEngine:
     
                         for rank in range(position[0] - 1, -1, -1):
                             square = chess.square(file, rank)
-                            if self.board.piece_at(square) == 'P':
+                            if board.piece_at(square) == 'P':
                                 passed_pawn = False
                                 break
                         
                         for rank in range(0, 8, 1):
                             square = chess.square(file, rank)
-                            if self.board.piece_at(square) == 'p':
+                            if board.piece_at(square) == 'p':
                                 isolated_pawn = False
                                 break
                         
@@ -351,16 +377,16 @@ class ChessEngine:
         return whiteEval - blackEval
 
 
-    def alphabeta_max(self, alpha, beta, depth, returnBestMove=False):
+    def alphabeta_max(self, board, alpha, beta, depth, returnBestMove=False):
         if depth == 0:
-            return self.evaluate()
+            return self.evaluate(board)
         
         best_move = None
 
-        for move in self.board.legal_moves:
-            self.board.push(move)
-            score = self.alphabeta_min(alpha, beta, depth - 1)
-            self.board.pop()
+        for move in board.legal_moves:
+            board.push(move)
+            score = self.alphabeta_min(board, alpha, beta, depth - 1)
+            board.pop()
             if score > alpha:
                 alpha = score
                 best_move = move
@@ -372,16 +398,16 @@ class ChessEngine:
         return alpha
 
 
-    def alphabeta_min(self, alpha, beta, depth, returnBestMove=False):
+    def alphabeta_min(self, board, alpha, beta, depth, returnBestMove=False):
         if depth == 0:
-            return self.evaluate()
+            return self.evaluate(board)
         
         best_move = None
 
-        for move in self.board.legal_moves:
-            self.board.push(move)
-            score = self.alphabeta_max(alpha, beta, depth - 1)
-            self.board.pop()
+        for move in board.legal_moves:
+            board.push(move)
+            score = self.alphabeta_max(board, alpha, beta, depth - 1)
+            board.pop()
             if score < beta:
                 beta = score
                 best_move = move
@@ -394,25 +420,86 @@ class ChessEngine:
         return beta
 
 
-    def find_best_move(self, depth):
+    def find_best_move(self, board, depth):
 
         best_move = None
-        if self.board.turn:
-            best_move = self.alphabeta_max(float('-inf'), float('inf'), depth, True)
+        if board.turn:
+            best_move = self.alphabeta_max(board, float('-inf'), float('inf'), depth, True)
         else:
-            best_move = self.alphabeta_min(float('-inf'), float('inf'), depth, True)
+            best_move = self.alphabeta_min(board, float('-inf'), float('inf'), depth, True)
         
         return best_move
 
 
+    def playing(self):
+        player_color = input('white, black\t')
+        board = chess.Board()
+
+        pgn_list = chess.pgn.Game()
+
+        if player_color:
+            pgn_list.headers["White"] = input('Write Player Name\t')
+            pgn_list.headers["Black"] = "AI"
+        else:
+            pgn_list.headers["Black"] = input("Write Player Name\t")
+            pgn_list.headers["White"] = "AI"
+
+        pgn_list.headers["Event"] = input('Write Event Name\t')
+        pgn_list.headers["Date"] = datetime.datetime.now().strftime("%Y-%m-%d")
+        End = True
+        turn = 0
+
+
+        while End:
+
+            if turn % 2 == 0:
+
+                command = input('enter UCI\t')
+
+                if command == 'exit':
+                    break
+
+                try:
+                    board.push_san(command)
+                    turn += 1
+
+                    if turn == 1:
+                        node = pgn_list.add_variation(chess.Move.from_uci(command))
+                    else:
+                        node = node.add_variation(chess.Move.from_uci(command))
+
+                except:
+                    pass
+
+                if board.is_stalemate() or board.is_checkmate():
+                    End = False
+
+            else:
+
+                command = str(self.find_best_move(board, 3))
+                command.replace('Move.from_uci(', '')
+                command.replace(')', '')
+
+                try:
+                    board.push_san(command)
+                    turn += 1
+                    node = node.add_variation(chess.Move.from_uci(command))
+                except:
+                    pass
+
+                if board.is_stalemate() or board.is_checkmate():
+                    End = False
+            
+            print(command)
+            print(board)
+
+        print(pgn_list)
+
+
+
     def run(self):
-        self.board.set_fen('r1b1kbnr/2p2ppp/p1p5/3p4/3qP1N1/3PB3/PPP2PPP/RN1QK2R b KQkq - 1 8')
-        start = time.time()
-        print(f'Current Position moves: {self.board.legal_moves.count()}')
-        print(f'Best Move: {self.find_best_move(5)}')
-        print(f'Time: {time.time() - start}')
-        print(f'Eval called: {self.eval_called}')
-        print(f'Cuttoff count: {self.cutoff_count}')
+        while True:
+            self.playing()
 
 
 if __name__ == "__main__":
